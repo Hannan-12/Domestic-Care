@@ -1,7 +1,7 @@
 // src/api/mapService.js
 import { API_KEYS } from '../constants/apiKeys';
 
-const GOOGLE_MAPS_API_KEY = API_KEYS.GOOGLE_MAPS_API_KEY;
+const GOOGLE_MAPS_API_KEY = AIzaSyDl0CIT3tc2r0weyv5A8ROcpCW4AmQBy9I;
 
 /**
  * Fetches the Estimated Time of Arrival (ETA) between two points.

@@ -1,30 +1,25 @@
-// src/api/firebase.js
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { getDatabase } from 'firebase/database';
 import { getStorage } from 'firebase/storage';
+import { getDatabase } from 'firebase/database';
 
-// Your web app's Firebase configuration
-// Get this from: Project Settings > General > Your apps > (Click your Web app)
 const firebaseConfig = {
-  apiKey: 'AIzaSyAKUZ00n5cJm0ijSbWADkwTOScs3Ofsfu', // From your screenshot
-  authDomain: 'PASTE_YOUR_AUTH_DOMAIN_HERE', // From your new Web app config
-  databaseURL: 'https://domesticcareserviceapp-default-rtdb.firebaseio.com',
-  projectId: 'domesticcareserviceapp', // From your screenshot
-  storageBucket: 'PASTE_YOUR_STORAGE_BUCKET_HERE', // From your new Web app config
-  messagingSenderId: 'PASTE_YOUR_MESSAGING_SENDER_ID_HERE', // From your new Web app config
-  appId: 'PASTE_YOUR_WEB_APP_ID_HERE', // From your new Web app config
-  measurementId: 'PASTE_YOUR_MEASUREMENT_ID_HERE', // Optional
+  apiKey: "AIzaSyAKUZ00n5cjJm0jiSbWADkwTOScs3OfsfU",
+  authDomain: "domesticcareservicesapp.firebaseapp.com",
+  projectId: "domesticcareservicesapp",
+  storageBucket: "domesticcareservicesapp.appspot.com",
+  messagingSenderId: "951162536195",
+  appId: "1:951162536195:android:f480aa66bdd6791e69e936",
+  measurementId: "G-XXXXXXXXXX"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// ✅ Prevent Firebase from initializing more than once
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Initialize Firebase services
 const auth = getAuth(app);
 const firestoreDB = getFirestore(app);
-const realtimeDB = getDatabase(app); // For Firebase Realtime Database
+const realtimeDB = getDatabase(app);
 const storage = getStorage(app);
 
-export { auth, firestoreDB, realtimeDB, storage };
+export { auth, firestoreDB, realtimeDB, storage, app };

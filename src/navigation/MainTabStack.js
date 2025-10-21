@@ -1,27 +1,26 @@
-// src/navigation/MainTabStack.js
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants/colors';
 
-// Import the main screen for each tab
-// We will create these screens in the /screens directory later
-import SearchServicesScreen from '../screens/Booking/SearchServicesScreen';
-import BookingStatusScreen from '../screens/Tracking/BookingStatusScreen';
-import UserProfileScreen from '../screens/Profile/UserProfileScreen';
-import HelpCenterScreen from '../screens/Support/HelpCenterScreen';
+// Import the new stack navigators for each tab
+import HomeStack from './HomeStack';
+import BookingStack from './BookingStack';
+import ProfileStack from './ProfileStack';
+import SupportStack from './SupportStack';
 
 const Tab = createBottomTabNavigator();
 
 /**
  * The main Bottom Tab Navigator for the app.
- * This is shown after the user logs in.
+ * Each tab is now its own StackNavigator.
  */
 const MainTabStack = () => {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        headerShown: true, // We can customize headers per-screen later
+        // Hide the header here because each stack has its own
+        headerShown: false, 
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.greyDark,
         tabBarStyle: {
@@ -50,23 +49,19 @@ const MainTabStack = () => {
     >
       <Tab.Screen
         name="Home"
-        component={SearchServicesScreen} // Module 2
-        options={{ title: 'Book a Service' }}
+        component={HomeStack} 
       />
       <Tab.Screen
         name="Bookings"
-        component={BookingStatusScreen} // Module 3
-        options={{ title: 'My Bookings' }}
+        component={BookingStack} 
       />
       <Tab.Screen
         name="Profile"
-        component={UserProfileScreen} // Module 1
-        options={{ title: 'My Profile' }}
+        component={ProfileStack} 
       />
       <Tab.Screen
         name="Support"
-        component={HelpCenterScreen} // Module 5
-        options={{ title: 'Help Center' }}
+        component={SupportStack} 
       />
     </Tab.Navigator>
   );

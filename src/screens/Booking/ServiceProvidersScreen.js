@@ -1,4 +1,3 @@
-// src/screens/Booking/ServiceProvidersScreen.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -18,10 +17,6 @@ import { Ionicons } from '@expo/vector-icons';
 
 /**
  * Screen to list available providers for a selected service (FR-5)
- *
- * @param {object} props
- * @param {object} props.navigation - React Navigation prop
- * @param {object} props.route - React Navigation prop (to get params)
  */
 const ServiceProvidersScreen = ({ route, navigation }) => {
   const { serviceId, serviceName } = route.params;
@@ -30,7 +25,6 @@ const ServiceProvidersScreen = ({ route, navigation }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Set the header title to the service name
     navigation.setOptions({ title: serviceName });
     fetchProviders(serviceId);
   }, [serviceId, serviceName, navigation]);
@@ -51,7 +45,6 @@ const ServiceProvidersScreen = ({ route, navigation }) => {
   };
 
   const handleProviderPress = (provider) => {
-    // Navigate to the screen where user can schedule the booking
     navigation.navigate('ScheduleScreen', { provider, serviceId });
   };
 
@@ -59,14 +52,6 @@ const ServiceProvidersScreen = ({ route, navigation }) => {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>Error: {error}</Text>
       </View>
     );
   }
@@ -181,3 +166,4 @@ const styles = StyleSheet.create({
 });
 
 export default ServiceProvidersScreen;
+
