@@ -20,7 +20,7 @@
       "package": "com.hannan.domesticcareservices"
     },
     "web": {
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "/Users/muhammadhannanhafeez/React native /DomesticCareServices/src/assests/images/DCS-logo.png.png"
     }
   }
 }
