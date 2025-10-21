@@ -4,11 +4,11 @@
     "slug": "DomesticCareServices",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "/Users/muhammadhannanhafeez/React native /DomesticCareServices/src/assests/images/DCS-logo.png.png",
     "scheme": "dcsapp",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/images/splash.png",
+      "image": "/Users/muhammadhannanhafeez/React native /DomesticCareServices/src/assests/images/DCS-logo.png.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
