@@ -23,7 +23,7 @@ const ServiceCard = ({ service, onPress }) => {
           source={
             service.imageUrl
               ? { uri: service.imageUrl }
-              : require('../../assets/images/default-placeholder.png') // We'll add this asset later
+              : require('/Users/muhammadhannanhafeez/React native /Domestic-Care/src/assests/images/icon.jpeg') // We'll add this asset later
           }
         />
         <View style={styles.textContainer}>

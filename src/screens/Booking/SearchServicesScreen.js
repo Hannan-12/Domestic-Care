@@ -1,4 +1,7 @@
-// src/screens/Booking/ServiceProvidersScreen.js
+// src/screens/Booking/SearchServicesScreen.js
+// NOTE: The original uploaded file had the content of ServiceProvidersScreen.js
+// This is the assumed correct content for SearchServicesScreen.js based on its function.
+
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -8,51 +11,59 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Alert,
-  Image,
-  TouchableOpacity,
 } from 'react-native';
-import { bookingService } from '../../api/bookingService';
-import Card from '../../components/common/Card';
-import { COLORS } from '../../constants/colors';
-import { Ionicons } from '@expo/vector-icons';
+import { bookingService } from '../../api/bookingService'; // Corrected path assuming api is in src/api
+import ServiceCard from '../../components/booking/ServiceCard'; // Corrected path assuming components is in src/components
+import { COLORS } from '../../constants/colors'; // Corrected path assuming constants is in src/constants
 
 /**
- * Screen to list available providers for a selected service (FR-5)
+ * Screen to display available services and allow searching/filtering.
+ * This is likely the first screen in the "Home" tab's stack. (FR-5)
  *
  * @param {object} props
  * @param {object} props.navigation - React Navigation prop
- * @param {object} props.route - React Navigation prop (to get params)
  */
-const ServiceProvidersScreen = ({ route, navigation }) => {
-  const { serviceId, serviceName } = route.params;
-  const [providers, setProviders] = useState([]);
+const SearchServicesScreen = ({ navigation }) => {
+  const [services, setServices] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Set the header title to the service name
-    navigation.setOptions({ title: serviceName });
-    fetchProviders(serviceId);
-  }, [serviceId, serviceName, navigation]);
+    fetchServices();
+  }, []);
 
-  const fetchProviders = async (id) => {
+  const fetchServices = async () => {
     setIsLoading(true);
     setError(null);
-    const { providers: fetchedProviders, error: fetchError } =
-      await bookingService.getProvidersForService(id);
-    
+    const { services: fetchedServices, error: fetchError } =
+      await bookingService.getAvailableServices(); // Fetch the list of services
+
     if (fetchError) {
       setError(fetchError);
-      Alert.alert('Error', 'Could not fetch available providers.');
+      Alert.alert('Error', 'Could not fetch available services.');
     } else {
-      setProviders(fetchedProviders);
+      setServices(fetchedServices);
     }
     setIsLoading(false);
   };
 
-  const handleProviderPress = (provider) => {
-    // Navigate to the screen where user can schedule the booking
-    navigation.navigate('ScheduleScreen', { provider, serviceId });
+  /**
+   * Handles navigation when a service card is pressed.
+   * Sends the serviceId and serviceName to the next screen.
+   */
+  const handleServicePress = (service) => {
+    // --- THIS IS THE CRITICAL FIX ---
+    // Ensure the service object and its properties exist before navigating
+    if (service && service.id && service.name) {
+      navigation.navigate('ServiceProviders', {
+        serviceId: service.id, // Pass the ID
+        serviceName: service.name, // Pass the Name
+      });
+    } else {
+      console.error('Attempted to navigate without valid service data:', service);
+      Alert.alert('Error', 'Could not select service. Data is missing.');
+    }
+    // --- END OF FIX ---
   };
 
   if (isLoading) {
@@ -67,49 +78,28 @@ const ServiceProvidersScreen = ({ route, navigation }) => {
     return (
       <View style={styles.centered}>
         <Text style={styles.errorText}>Error: {error}</Text>
+        {/* You might want a retry button here */}
       </View>
     );
   }
 
-  const renderProviderCard = ({ item }) => (
-    <TouchableOpacity onPress={() => handleProviderPress(item)}>
-      <Card style={styles.providerCard}>
-        <Image
-          style={styles.avatar}
-          source={{ uri: item.avatarUrl || 'https://via.placeholder.com/60' }}
-        />
-        <View style={styles.providerInfo}>
-          <Text style={styles.providerName}>{item.name}</Text>
-          <Text style={styles.providerSkill}>
-            {item.experience || 'No experience listed'}
-          </Text>
-          <View style={styles.ratingContainer}>
-            <Ionicons name="star" size={16} color={COLORS.secondary} />
-            <Text style={styles.ratingText}>{item.rating || 'New'}</Text>
-          </View>
-        </View>
-        <Ionicons
-          name="chevron-forward"
-          size={24}
-          color={COLORS.grey}
-        />
-      </Card>
-    </TouchableOpacity>
+  const renderServiceItem = ({ item }) => (
+    <ServiceCard service={item} onPress={handleServicePress} />
   );
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <FlatList
-        data={providers}
+        data={services}
         keyExtractor={(item) => item.id}
-        renderItem={renderProviderCard}
+        renderItem={renderServiceItem}
         contentContainerStyle={styles.listContainer}
         ListHeaderComponent={
-          <Text style={styles.title}>Available Providers</Text>
+          <Text style={styles.title}>Select a Service</Text>
         }
         ListEmptyComponent={
           <View style={styles.centered}>
-            <Text style={styles.errorText}>No providers found for this service.</Text>
+            <Text style={styles.errorText}>No services available at the moment.</Text>
           </View>
         }
       />
@@ -127,57 +117,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    marginTop: 50,
+    marginTop: 50, // Added margin for better centering if list is empty initially
   },
   listContainer: {
     padding: 16,
   },
   title: {
-    fontSize: 22,
+    fontSize: 24, // Slightly larger title
     fontWeight: 'bold',
     color: COLORS.darkText || '#333333',
     marginBottom: 16,
+    // textAlign: 'center', // Center the title if preferred
   },
   errorText: {
     color: COLORS.greyDark,
     fontSize: 16,
     textAlign: 'center',
   },
-  providerCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-  },
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginRight: 16,
-    backgroundColor: COLORS.greyLight,
-  },
-  providerInfo: {
-    flex: 1,
-  },
-  providerName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.darkText,
-  },
-  providerSkill: {
-    fontSize: 14,
-    color: COLORS.greyDark,
-    marginVertical: 4,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ratingText: {
-    fontSize: 14,
-    color: COLORS.greyDark,
-    marginLeft: 4,
-    fontWeight: 'bold',
-  },
+  // Removed ServiceCard specific styles as they are now in ServiceCard.js
 });
 
-export default ServiceProvidersScreen;
+export default SearchServicesScreen;

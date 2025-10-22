@@ -3,11 +3,13 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
-  ScrollView,
+  ScrollView, // Removed deprecated SafeAreaView
   Alert,
   Image,
+  TouchableOpacity,
 } from 'react-native';
+// NEW IMPORT
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../hooks/useAuth';
 import { authService } from '../../api/authService';
 import Button from '../../components/common/Button';
@@ -22,9 +24,10 @@ import { Ionicons } from '@expo/vector-icons';
  * @param {object} props.navigation - React Navigation prop
  */
 const UserProfileScreen = ({ navigation }) => {
-  const { profile, user } = useAuth();
+  const { profile, user, isLoading } = useAuth();
 
   const handleLogout = async () => {
+    // ... (your existing logout logic is fine)
     Alert.alert('Log Out', 'Are you sure you want to log out?', [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -38,7 +41,7 @@ const UserProfileScreen = ({ navigation }) => {
     ]);
   };
 
-  if (!profile) {
+  if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centered}>
@@ -48,8 +51,36 @@ const UserProfileScreen = ({ navigation }) => {
     );
   }
 
+  // Handle case where user is logged in but has no profile data
+  // (This is what you are seeing now due to the Firestore error)
+  if (!profile && user) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.centered}>
+          <Text style={styles.email}>Welcome {user.email}</Text>
+          <Text style={styles.errorText}>Could not load profile data.</Text>
+          <Text style={styles.errorText}>
+            (This may be a network or permissions issue).
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Handle case where user is fully logged out
+  if (!user) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.centered}>
+          <Text>Not logged in.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.safeArea}>
+    // Use edges to ignore the bottom safe area for the scroll view
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
           <Image
@@ -113,6 +144,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   header: {
     alignItems: 'center',
@@ -156,6 +188,14 @@ const styles = StyleSheet.create({
     marginTop: 32,
     borderColor: COLORS.danger,
   },
+  // ADDED THIS STYLE
+  errorText: {
+    fontSize: 14,
+    color: COLORS.greyDark,
+    marginTop: 8,
+    textAlign: 'center',
+  },
 });
 
 export default UserProfileScreen;
+

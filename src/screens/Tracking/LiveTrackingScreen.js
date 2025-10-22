@@ -8,9 +8,8 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+// import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps'; // Commented out for Expo Go compatibility
 import { bookingService } from '../../api/bookingService';
-import { mapService } from '../../api/mapService';
 import { useAuth } from '../../hooks/useAuth';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
@@ -25,7 +24,7 @@ import { COLORS } from '../../constants/colors';
 const LiveTrackingScreen = ({ route }) => {
   const { bookingId, providerId } = route.params;
   const { profile: userProfile } = useAuth(); // Get user's profile for their location
-  const mapRef = useRef(null);
+  // const mapRef = useRef(null); // Commented out - MapView is not used
 
   const [providerLocation, setProviderLocation] = useState(null);
   const [eta, setEta] = useState(null);
@@ -45,11 +44,12 @@ const LiveTrackingScreen = ({ route }) => {
         if (location) {
           setProviderLocation(location);
           // Fit map to both user and provider
-          if (mapRef.current) {
-            mapRef.current.fitToCoordinates([location, userLocation], {
-              edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
-            });
-          }
+          // Commented out - MapView is not used
+          // if (mapRef.current) {
+          //   mapRef.current.fitToCoordinates([location, userLocation], {
+          //     edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+          //   });
+          // }
         } else {
           setError('Provider location is not available.');
         }
@@ -98,7 +98,8 @@ const LiveTrackingScreen = ({ route }) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <MapView
+      {/* MapView is commented out for Expo Go compatibility */}
+      {/* <MapView
         ref={mapRef}
         style={styles.map}
         provider={PROVIDER_GOOGLE}
@@ -107,23 +108,32 @@ const LiveTrackingScreen = ({ route }) => {
           latitudeDelta: 0.0922,
           longitudeDelta: 0.0421,
         }}
-      >
+      > */}
         {/* User's Location Marker */}
-        <Marker
+        {/* <Marker
           coordinate={userLocation}
           title="Your Location"
           pinColor={COLORS.primary}
-        />
+        /> */}
 
         {/* Provider's Location Marker */}
-        {providerLocation && (
+        {/* {providerLocation && (
           <Marker
             coordinate={providerLocation}
             title="Service Provider"
             pinColor={COLORS.secondary}
           />
         )}
-      </MapView>
+      </MapView> */}
+
+      {/* Placeholder View since MapView is removed */}
+      <View style={styles.mapPlaceholder}>
+        <Text style={styles.mapPlaceholderText}>Map functionality requires a development build.</Text>
+        {providerLocation && (
+          <Text>Provider Lat: {providerLocation.latitude}, Lng: {providerLocation.longitude}</Text>
+        )}
+      </View>
+
 
       <Card style={styles.detailsCard}>
         {eta && <Text style={styles.etaText}>Estimated Arrival: {eta}</Text>}
@@ -134,7 +144,7 @@ const LiveTrackingScreen = ({ route }) => {
             <Text style={styles.loadingText}>Waiting for provider's location...</Text>
           </View>
         )}
-        
+
         {error && <Text style={styles.errorText}>{error}</Text>}
 
         <Button
@@ -154,8 +164,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background || '#F5F5DC',
   },
-  map: {
+  map: { // Keep style for potential uncommenting
     flex: 1,
+  },
+  // Added placeholder style
+  mapPlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.greyLight,
+    padding: 20,
+  },
+  mapPlaceholderText: {
+    textAlign: 'center',
+    color: COLORS.greyDark,
+    fontSize: 16,
+    marginBottom: 10,
   },
   detailsCard: {
     position: 'absolute',

@@ -1,4 +1,3 @@
-// src/api/profileService.js
 import {
   doc,
   setDoc,
@@ -13,7 +12,9 @@ import {
 } from 'firebase/firestore';
 import { firestoreDB } from './firebase';
 
-const PROFILES_COLLECTION = 'userProfiles';
+// This is the one-line fix:
+// Changed 'userProfiles' to 'users' to match your Firebase Rules
+const PROFILES_COLLECTION = 'users';
 const REVIEWS_COLLECTION = 'reviews';
 
 /**
@@ -148,3 +149,4 @@ export const profileService = {
   submitProviderReview,
   getProviderReviews,
 };
+

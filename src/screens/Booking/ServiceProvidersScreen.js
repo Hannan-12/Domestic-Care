@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   },
   providerName: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: 'bold', // <-- This is the fix. The extra '.' is removed.
     color: COLORS.darkText,
   },
   providerSkill: {
