@@ -1,7 +1,4 @@
 // src/screens/Booking/SearchServicesScreen.js
-// NOTE: The original uploaded file had the content of ServiceProvidersScreen.js
-// This is the assumed correct content for SearchServicesScreen.js based on its function.
-
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -12,13 +9,13 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { bookingService } from '../../api/bookingService'; // Corrected path assuming api is in src/api
-import ServiceCard from '../../components/booking/ServiceCard'; // Corrected path assuming components is in src/components
-import { COLORS } from '../../constants/colors'; // Corrected path assuming constants is in src/constants
+import { bookingService } from '../../api/bookingService';
+import ServiceCard from '../../components/booking/ServiceCard';
+import { COLORS } from '../../constants/colors';
 
 /**
- * Screen to display available services and allow searching/filtering.
- * This is likely the first screen in the "Home" tab's stack. (FR-5)
+ * Screen to search and filter services (FR-5)
+ * This is the main screen in the "Home" tab.
  *
  * @param {object} props
  * @param {object} props.navigation - React Navigation prop
@@ -36,11 +33,12 @@ const SearchServicesScreen = ({ navigation }) => {
     setIsLoading(true);
     setError(null);
     const { services: fetchedServices, error: fetchError } =
-      await bookingService.getAvailableServices(); // Fetch the list of services
-
+      await bookingService.getAvailableServices();
+    
     if (fetchError) {
       setError(fetchError);
       Alert.alert('Error', 'Could not fetch available services.');
+      console.error("Error fetching services: ", fetchError); // Added console log
     } else {
       setServices(fetchedServices);
     }
@@ -48,22 +46,26 @@ const SearchServicesScreen = ({ navigation }) => {
   };
 
   /**
-   * Handles navigation when a service card is pressed.
-   * Sends the serviceId and serviceName to the next screen.
+   * CORRECTED NAVIGATION with CHECKS:
+   * When a service card is pressed, navigate to the ServiceProvidersScreen,
+   * passing the selected service's ID and Name.
    */
   const handleServicePress = (service) => {
-    // --- THIS IS THE CRITICAL FIX ---
-    // Ensure the service object and its properties exist before navigating
-    if (service && service.id && service.name) {
-      navigation.navigate('ServiceProviders', {
-        serviceId: service.id, // Pass the ID
-        serviceName: service.name, // Pass the Name
-      });
-    } else {
-      console.error('Attempted to navigate without valid service data:', service);
-      Alert.alert('Error', 'Could not select service. Data is missing.');
+    // --- Add Checks ---
+    console.log("Service pressed:", JSON.stringify(service)); // Log the service data
+
+    if (!service || !service.id || !service.Name) {
+      console.error("Attempted to navigate without valid service data:", service);
+      Alert.alert("Navigation Error", "Could not load service details. Please try again.");
+      return; // Stop navigation if data is invalid
     }
-    // --- END OF FIX ---
+    // --- End Checks ---
+
+    // Navigate to the screen listing providers for this service
+    navigation.navigate('ServiceProviders', { 
+        serviceId: service.id, 
+        serviceName: service.Name // Use capital 'N' from Firestore data
+    });
   };
 
   if (isLoading) {
@@ -74,34 +76,37 @@ const SearchServicesScreen = ({ navigation }) => {
     );
   }
 
-  if (error) {
+  // Use the error state to show fetch errors
+  if (error && services.length === 0) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>Error: {error}</Text>
-        {/* You might want a retry button here */}
+        <Text style={styles.errorText}>Error loading services: {error.message || error}</Text>
       </View>
     );
   }
-
-  const renderServiceItem = ({ item }) => (
-    <ServiceCard service={item} onPress={handleServicePress} />
-  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <FlatList
         data={services}
         keyExtractor={(item) => item.id}
-        renderItem={renderServiceItem}
+        renderItem={({ item }) => (
+          <ServiceCard service={item} onPress={handleServicePress} />
+        )}
         contentContainerStyle={styles.listContainer}
         ListHeaderComponent={
-          <Text style={styles.title}>Select a Service</Text>
+          <Text style={styles.title}>What service do you need?</Text>
         }
-        ListEmptyComponent={
-          <View style={styles.centered}>
-            <Text style={styles.errorText}>No services available at the moment.</Text>
-          </View>
+         ListEmptyComponent={
+            // Show only if not loading and no error fetching
+            !isLoading && !error ? (
+                 <View style={styles.centered}>
+                    <Text style={styles.errorText}>No services available at the moment.</Text>
+                 </View>
+            ) : null // Don't show "No services" if there was a fetch error
         }
+        onRefresh={fetchServices}
+        refreshing={isLoading}
       />
     </SafeAreaView>
   );
@@ -117,24 +122,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    marginTop: 50, // Added margin for better centering if list is empty initially
+    marginTop: 50,
   },
   listContainer: {
     padding: 16,
   },
   title: {
-    fontSize: 24, // Slightly larger title
+    fontSize: 24,
     fontWeight: 'bold',
     color: COLORS.darkText || '#333333',
     marginBottom: 16,
-    // textAlign: 'center', // Center the title if preferred
   },
   errorText: {
     color: COLORS.greyDark,
     fontSize: 16,
     textAlign: 'center',
   },
-  // Removed ServiceCard specific styles as they are now in ServiceCard.js
 });
 
 export default SearchServicesScreen;
+

@@ -41,14 +41,15 @@ const BookingStatusScreen = ({ navigation }) => {
     setError(null);
     const { bookings: fetchedBookings, error: fetchError } =
       await bookingService.getUserBookings(user.uid);
-    
+
     if (fetchError) {
       setError(fetchError);
       Alert.alert('Error', 'Could not fetch your bookings.');
     } else {
       // Sort bookings by date, newest first
-      const sortedBookings = fetchedBookings.sort((a, b) => 
-        b.scheduleTime.toDate() - a.scheduleTime.toDate()
+      // Corrected: Directly compare Date objects
+      const sortedBookings = fetchedBookings.sort((a, b) =>
+        b.scheduleTime - a.scheduleTime
       );
       setBookings(sortedBookings);
     }
@@ -58,9 +59,21 @@ const BookingStatusScreen = ({ navigation }) => {
   const handleBookingPress = (booking) => {
     // If the booking is active, navigate to live tracking (FR-9)
     if (booking.status === 'in-progress' || booking.status === 'confirmed') {
-      navigation.navigate('LiveTrackingScreen', { bookingId: booking.id, providerId: booking.providerId });
+      // Ensure providerId is passed correctly
+      if (booking.providerId) {
+          navigation.navigate('LiveTrackingScreen', { bookingId: booking.id, providerId: booking.providerId });
+      } else {
+          Alert.alert("Error", "Provider information is missing for this booking.");
+      }
+    } else if (booking.status === 'completed') {
+       // Optional: Navigate to a review screen if needed (FR-13)
+       // navigation.navigate('RateProviderScreen', { booking });
+       Alert.alert("Booking Completed", "This booking is already completed.");
+    } else {
+       Alert.alert("Booking Status", `This booking is currently: ${booking.status}`);
     }
   };
+
 
   if (isLoading) {
     return (
@@ -70,26 +83,37 @@ const BookingStatusScreen = ({ navigation }) => {
     );
   }
 
-  const renderBookingCard = ({ item }) => (
-    <TouchableOpacity onPress={() => handleBookingPress(item)}>
-      <Card style={styles.bookingCard}>
-        <View>
-          <Text style={styles.bookingService}>Service ID: {item.serviceId}</Text>
-          <Text style={styles.bookingDate}>
-            {item.scheduleTime.toDate().toLocaleString()}
-          </Text>
-          <Text style={styles.bookingProvider}>
-            Provider ID: {item.providerId}
-          </Text>
-        </View>
-        <View style={styles.statusContainer}>
-          <Text style={[styles.statusText, getStatusColor(item.status)]}>
-            {item.status.toUpperCase()}
-          </Text>
-        </View>
-      </Card>
-    </TouchableOpacity>
-  );
+  const renderBookingCard = ({ item }) => {
+     // Check if scheduleTime is a valid Date object before formatting
+     const displayDate = item.scheduleTime instanceof Date
+       ? item.scheduleTime.toLocaleString()
+       : 'Invalid Date';
+
+     return (
+        <TouchableOpacity onPress={() => handleBookingPress(item)}>
+          <Card style={styles.bookingCard}>
+            <View>
+              {/* Consider fetching and showing service name */}
+              <Text style={styles.bookingService}>Service ID: {item.serviceId}</Text>
+              {/* Corrected: Directly format the Date object */}
+              <Text style={styles.bookingDate}>
+                {displayDate}
+              </Text>
+              {/* Consider fetching and showing provider name */}
+              <Text style={styles.bookingProvider}>
+                Provider ID: {item.providerId || 'N/A'}
+              </Text>
+            </View>
+            <View style={styles.statusContainer}>
+              <Text style={[styles.statusText, getStatusColor(item.status)]}>
+                {(item.status || 'Unknown').toUpperCase()}
+              </Text>
+            </View>
+          </Card>
+        </TouchableOpacity>
+     );
+  };
+
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -159,6 +183,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
+    marginVertical: 8, // Add some vertical margin
   },
   bookingService: {
     fontSize: 16,
@@ -179,6 +204,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 12,
     backgroundColor: COLORS.greyLight,
+    alignSelf: 'flex-start', // Align status to top
   },
   statusText: {
     fontSize: 12,
