@@ -12,13 +12,13 @@ import {
 import { ref, onValue, get, set } from 'firebase/database';
 import { firestoreDB, realtimeDB } from './firebase';
 
-const SERVICES_COLLECTION = 'services';
+const SERVICES_COLLECTION = 'Services'; // Corrected: Capital 'S'
 const BOOKINGS_COLLECTION = 'bookings';
 const PROVIDER_LOCATIONS_REF = 'providerLocations'; // Using Realtime DB for live location
 
 /**
  * Fetches the list of available services (Housekeeping, Pet Care, etc.)
- * Corresponds to FR-5 [cite: 273]
+ * Corresponds to FR-5
  */
 const getAvailableServices = async () => {
   try {
@@ -30,23 +30,25 @@ const getAvailableServices = async () => {
     }));
     return { services, error: null };
   } catch (error) {
+    console.error("Error fetching services: ", error); // Add console log
     return { services: [], error: error.message };
   }
 };
 
 /**
  * Searches for providers based on service type.
- * This can be expanded with more filters (time, location) as per FR-5 [cite: 273]
+ * This can be expanded with more filters (time, location) as per FR-5
  */
 const getProvidersForService = async (serviceId) => {
   try {
     // This assumes providers have their services listed in their profiles
+    // Also check the field name 'skills' and value 'serviceId' case
     const providersQuery = query(
       collection(firestoreDB, 'userProfiles'),
       where('role', '==', 'provider'),
-      where('skills', 'array-contains', serviceId)
+      where('skills', 'array-contains', serviceId) // Ensure 'serviceId' case matches what's stored
     );
-    
+
     const querySnapshot = await getDocs(providersQuery);
     const providers = querySnapshot.docs.map((doc) => ({
       id: doc.id,
@@ -54,14 +56,15 @@ const getProvidersForService = async (serviceId) => {
     }));
     return { providers, error: null };
   } catch (error) {
+    console.error("Error fetching providers: ", error); // Add console log
     return { providers: [], error: error.message };
   }
 };
 
 /**
  * Creates a new booking in Firestore.
- * Corresponds to FR-6 (Book Immediate/Scheduled) [cite: 277]
- * and FR-7 (Add Custom Notes) [cite: 278]
+ * Corresponds to FR-6 (Book Immediate/Scheduled)
+ * and FR-7 (Add Custom Notes)
  */
 const createBooking = async (bookingData) => {
   // bookingData should include:
@@ -76,6 +79,7 @@ const createBooking = async (bookingData) => {
     );
     return { bookingId: docRef.id, error: null };
   } catch (error) {
+    console.error("Error creating booking: ", error); // Add console log
     return { bookingId: null, error: error.message };
   }
 };
@@ -94,23 +98,30 @@ const getUserBookings = async (userId) => {
       id: doc.id,
       ...doc.data(),
     }));
-    return { bookings, error: null };
+    // Firestore Timestamps need conversion
+    const convertedBookings = bookings.map(booking => ({
+      ...booking,
+      createdAt: booking.createdAt?.toDate ? booking.createdAt.toDate() : booking.createdAt,
+      scheduleTime: booking.scheduleTime?.toDate ? booking.scheduleTime.toDate() : booking.scheduleTime,
+    }));
+    return { bookings: convertedBookings, error: null };
   } catch (error) {
+    console.error("Error fetching user bookings: ", error); // Add console log
     return { bookings: [], error: error.message };
   }
 };
 
 /**
  * Listens for real-time location updates for a specific provider.
- * Corresponds to FR-9 (Real-Time GPS Tracking) [cite: 284]
- * Uses Realtime Database as specified in CON-1 [cite: 139]
+ * Corresponds to FR-9 (Real-Time GPS Tracking)
+ * Uses Realtime Database as specified in CON-1
  */
 const listenToProviderLocation = (providerId, callback) => {
   const providerLocationRef = ref(
     realtimeDB,
     `${PROVIDER_LOCATIONS_REF}/${providerId}`
   );
-  
+
   // onValue() sets up a persistent listener
   const unsubscribe = onValue(providerLocationRef, (snapshot) => {
     if (snapshot.exists()) {
@@ -118,6 +129,9 @@ const listenToProviderLocation = (providerId, callback) => {
     } else {
       callback(null); // Provider location not available
     }
+  }, (error) => { // Add error handling for listener
+      console.error("Error listening to provider location: ", error);
+      callback(null);
   });
 
   return unsubscribe; // Return the function to stop listening
@@ -137,8 +151,9 @@ const updateProviderLocation = async (providerId, location) => {
         ...location,
         lastUpdated: new Date().toISOString(),
     });
-    return { success: true };
+    return { success: true, error: null };
   } catch (error) {
+    console.error("Error updating provider location: ", error); // Add console log
     return { success: false, error: error.message };
   }
 }

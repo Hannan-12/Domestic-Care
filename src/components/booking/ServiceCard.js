@@ -9,12 +9,15 @@ import { COLORS } from '../../constants/colors';
  *
  * @param {object} props
  * @param {object} props.service - The service object.
- * @param {string} props.service.name - The name of the service.
+ * @param {string} props.service.Name - The name of the service (Corrected: Capital 'N').
  * @param {string} [props.service.description] - A short description.
  * @param {string} [props.service.imageUrl] - URL for the service image.
  * @param {function} props.onPress - Function to call when the card is pressed.
  */
 const ServiceCard = ({ service, onPress }) => {
+  // Define a placeholder image path
+  const placeholderImage = require('/Users/muhammadhannanhafeez/React native /Domestic-Care/src/assests/images/icon.jpeg'); // Or icon.png
+
   return (
     <TouchableOpacity onPress={() => onPress(service)}>
       <Card style={styles.container}>
@@ -23,11 +26,14 @@ const ServiceCard = ({ service, onPress }) => {
           source={
             service.imageUrl
               ? { uri: service.imageUrl }
-              : require('/Users/muhammadhannanhafeez/React native /Domestic-Care/src/assests/images/icon.jpeg') // We'll add this asset later
+              : placeholderImage // Use the defined placeholder
           }
+          // Add error handling for network images
+          onError={(e) => console.log('Failed to load image:', e.nativeEvent.error)}
         />
         <View style={styles.textContainer}>
-          <Text style={styles.title}>{service.name}</Text>
+          {/* Corrected: Use service.Name with capital 'N' */}
+          <Text style={styles.title}>{service.Name}</Text>
           {service.description && (
             <Text style={styles.description} numberOfLines={2}>
               {service.description}
