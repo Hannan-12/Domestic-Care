@@ -1,3 +1,4 @@
+// src/api/profileService.js
 import {
   doc,
   setDoc,
@@ -9,12 +10,12 @@ import {
   query,
   where,
   getDocs,
+  Timestamp, // Import Timestamp for date handling
 } from 'firebase/firestore';
 import { firestoreDB } from './firebase';
 
-// This is the one-line fix:
-// Changed 'userProfiles' to 'users' to match your Firebase Rules
-const PROFILES_COLLECTION = 'users';
+// CORRECTED: Match the collection name in your Firestore screenshot
+const PROFILES_COLLECTION = 'users'; 
 const REVIEWS_COLLECTION = 'reviews';
 
 /**
@@ -22,15 +23,17 @@ const REVIEWS_COLLECTION = 'reviews';
  * This is typically called right after FR-1 (User Registration).
  */
 const createUserProfile = async (userId, profileData) => {
-  // profileData should include { email, name, address, contact, role: 'client' or 'provider' }
+  // profileData should include { email, name, role: 'client' or 'provider' }
   try {
     const userDocRef = doc(firestoreDB, PROFILES_COLLECTION, userId);
     await setDoc(userDocRef, {
       ...profileData,
-      createdAt: new Date(),
+      createdAt: Timestamp.fromDate(new Date()), // Use Firestore Timestamp
     });
+    console.log("Profile created successfully for:", userId);
     return { success: true, error: null };
   } catch (error) {
+    console.error("Error creating profile in Firestore:", error);
     return { success: false, error: error.message };
   }
 };
@@ -44,11 +47,19 @@ const getUserProfile = async (userId) => {
     const docSnap = await getDoc(userDocRef);
 
     if (docSnap.exists()) {
-      return { profile: { id: docSnap.id, ...docSnap.data() }, error: null };
+      // Convert Firestore Timestamps back to JS Dates if needed by the UI
+      const profileData = docSnap.data();
+      if (profileData.createdAt && profileData.createdAt.toDate) {
+          profileData.createdAt = profileData.createdAt.toDate();
+      }
+      return { profile: { id: docSnap.id, ...profileData }, error: null };
     } else {
+      // It's not an error if the profile doesn't exist, just return null
+      console.warn(`No profile document found for userId: ${userId}`);
       return { profile: null, error: 'No such profile!' };
     }
   } catch (error) {
+    console.error("Error fetching user profile:", error);
     return { profile: null, error: error.message };
   }
 };
@@ -63,6 +74,7 @@ const updateUserProfile = async (userId, updatedData) => {
     await updateDoc(userDocRef, updatedData);
     return { success: true, error: null };
   } catch (error) {
+     console.error("Error updating user profile:", error);
     return { success: false, error: error.message };
   }
 };
@@ -77,25 +89,27 @@ const updateProviderDetails = async (providerId, details) => {
     const providerDocRef = doc(firestoreDB, PROFILES_COLLECTION, providerId);
     await updateDoc(providerDocRef, {
       ...details,
-      profileStatus: 'complete',
+      profileStatus: 'complete', // Optional: Mark profile as complete
     });
     return { success: true, error: null };
   } catch (error) {
+    console.error("Error updating provider details:", error);
     return { success: false, error: error.message };
   }
 };
 
 /**
- * Deletes a user's profile.
+ * Deletes a user's profile document.
+ * Note: This does NOT delete the Firebase Auth user.
  * Corresponds to FR-4 (Update/Delete Profile).
  */
-const deleteUserProfile = async (userId) => {
+const deleteUserProfileDocument = async (userId) => {
   try {
     const userDocRef = doc(firestoreDB, PROFILES_COLLECTION, userId);
     await deleteDoc(userDocRef);
-    // You should also delete the user from Firebase Auth here
     return { success: true, error: null };
   } catch (error) {
+    console.error("Error deleting user profile document:", error);
     return { success: false, error: error.message };
   }
 };
@@ -110,11 +124,12 @@ const submitProviderReview = async (reviewData) => {
     const docRef = await addDoc(collection(firestoreDB, REVIEWS_COLLECTION), {
       ...reviewData,
       type: 'provider_review',
-      createdAt: new Date(),
+      createdAt: Timestamp.fromDate(new Date()),
     });
-    // You might also update the provider's average rating here
+    // TODO: You might also update the provider's average rating here (e.g., using a transaction or cloud function)
     return { reviewId: docRef.id, error: null };
   } catch (error) {
+    console.error("Error submitting provider review:", error);
     return { reviewId: null, error: error.message };
   }
 };
@@ -128,14 +143,20 @@ const getProviderReviews = async (providerId) => {
       collection(firestoreDB, REVIEWS_COLLECTION),
       where('providerId', '==', providerId),
       where('type', '==', 'provider_review')
+      // Consider adding orderBy('createdAt', 'desc') if needed
     );
     const querySnapshot = await getDocs(reviewsQuery);
-    const reviews = querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const reviews = querySnapshot.docs.map((doc) => {
+         const data = doc.data();
+         // Convert Timestamp
+         if (data.createdAt && data.createdAt.toDate) {
+             data.createdAt = data.createdAt.toDate();
+         }
+         return { id: doc.id, ...data };
+    });
     return { reviews, error: null };
   } catch (error) {
+    console.error("Error fetching provider reviews:", error);
     return { reviews: [], error: error.message };
   }
 };
@@ -145,7 +166,7 @@ export const profileService = {
   getUserProfile,
   updateUserProfile,
   updateProviderDetails,
-  deleteUserProfile,
+  deleteUserProfileDocument, // Renamed for clarity
   submitProviderReview,
   getProviderReviews,
 };

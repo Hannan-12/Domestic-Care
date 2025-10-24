@@ -1,4 +1,3 @@
-// src/screens/Auth/RegisterScreen.js
 import React, { useState } from 'react';
 import {
   View,
@@ -9,6 +8,7 @@ import {
   SafeAreaView,
   ScrollView,
   Switch,
+  Image,
 } from 'react-native';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
@@ -16,18 +16,14 @@ import { authService } from '../../api/authService';
 import { profileService } from '../../api/profileService';
 import { COLORS } from '../../constants/colors';
 
-/**
- * Registration Screen (FR-1)
- *
- * @param {object} props
- * @param {object} props.navigation - React Navigation prop
- */
+const logo = require('/Users/muhammadhannanhafeez/React native /Domestic-Care/src/assests/images/DCS-logo.png.png');
+
 const RegisterScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
-  const [isProvider, setIsProvider] = useState(false); // Toggle for user role
+  const [isProvider, setIsProvider] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -40,11 +36,14 @@ const RegisterScreen = ({ navigation }) => {
       setError('Passwords do not match.');
       return;
     }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
 
-    // 1. Create the user in Firebase Auth
     const { user, error: authError } = await authService.registerWithEmail(
       email,
       password
@@ -52,33 +51,35 @@ const RegisterScreen = ({ navigation }) => {
 
     if (authError) {
       setIsLoading(false);
-      Alert.alert('Registration Failed', authError);
+      if (authError.includes('auth/email-already-in-use')) {
+        Alert.alert('Registration Failed', 'This email address is already registered.');
+      } else if (authError.includes('auth/invalid-email')) {
+        Alert.alert('Registration Failed', 'Please enter a valid email address.');
+      } else {
+        Alert.alert('Registration Failed', authError);
+      }
       setError(authError);
       return;
     }
 
-    // 2. Create the user profile in Firestore
     const profileData = {
       email: user.email,
       name: name,
       role: isProvider ? 'provider' : 'client',
-      // Add other default fields like address, contact as needed
+      createdAt: new Date(),
     };
 
     const { success, error: profileError } =
       await profileService.createUserProfile(user.uid, profileData);
 
-    setIsLoading(false);
-
     if (profileError) {
-      // Handle profile creation error (e.g., delete the auth user or show a warning)
+      console.error("Error creating profile:", profileError);
       Alert.alert(
         'Registration Error',
         'Your account was created, but we failed to save your profile. Please contact support.'
       );
       setError(profileError);
     } else {
-      // Success! The onAuthChange listener will navigate to the main app.
       console.log('Registered new user:', user.uid);
       Alert.alert(
         'Success',
@@ -90,16 +91,16 @@ const RegisterScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
+        <Image source={logo} style={styles.logo} resizeMode="contain" />
         <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>
-          Sign up to get started
-        </Text>
+        <Text style={styles.subtitle}>Sign up to get started</Text>
 
         <Input
           label="Full Name"
           placeholder="Your full name"
           value={name}
           onChangeText={setName}
+          error={error && error.includes('name') ? error : null}
         />
 
         <Input
@@ -108,6 +109,7 @@ const RegisterScreen = ({ navigation }) => {
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
+          error={error && (error.includes('email') || error.includes('valid')) ? error : null}
         />
 
         <Input
@@ -116,6 +118,7 @@ const RegisterScreen = ({ navigation }) => {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          error={error && (error.includes('password') || error.includes('6 characters')) ? error : null}
         />
 
         <Input
@@ -124,6 +127,7 @@ const RegisterScreen = ({ navigation }) => {
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           secureTextEntry
+          error={error && error.includes('match') ? error : null}
         />
 
         <View style={styles.switchContainer}>
@@ -136,7 +140,9 @@ const RegisterScreen = ({ navigation }) => {
           />
         </View>
 
-        {error && <Text style={styles.generalError}>{error}</Text>}
+        {error && !(error.includes('name') || error.includes('email') || error.includes('password') || error.includes('match') || error.includes('6 characters') || error.includes('valid')) && (
+          <Text style={styles.generalError}>{error}</Text>
+        )}
 
         <Button
           title="Sign Up"
@@ -165,6 +171,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
   },
+  logo: {
+    width: 150,
+    height: 150,
+    alignSelf: 'center',
+    marginBottom: 24,
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -187,7 +199,7 @@ const styles = StyleSheet.create({
   },
   switchLabel: {
     fontSize: 16,
-    color: COLORS.darkText,
+    color: COLORS.darkText || '#333333',
   },
   registerButton: {
     marginTop: 16,
@@ -205,6 +217,7 @@ const styles = StyleSheet.create({
     color: COLORS.danger || '#D9534F',
     textAlign: 'center',
     marginBottom: 10,
+    fontSize: 14,
   },
 });
 

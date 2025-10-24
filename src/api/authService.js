@@ -12,10 +12,7 @@ import {
 } from 'firebase/auth';
 import { auth } from './firebase'; // Import the initialized auth object
 
-/**
- * FR-1: Register a new user with email and password
- * [cite: 263]
- */
+
 const registerWithEmail = async (email, password) => {
   try {
     const userCredential = await createUserWithEmailAndPassword(

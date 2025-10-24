@@ -23,23 +23,29 @@ export const AuthProvider = ({ children }) => {
           // User is logged in
           setUser(authUser);
           console.log('useAuth: User found, fetching profile...', authUser.uid);
-          
+
           // Now fetch their profile data from Firestore
           // This call must be wrapped in its own try/catch in case ONLY it fails
           try {
-            const { profile: userProfile } = await profileService.getUserProfile(
+            const { profile: userProfile, error: profileFetchError } = await profileService.getUserProfile(
               authUser.uid
             );
 
-            if (userProfile) {
+            // Check for explicit error from the service first
+            if (profileFetchError && profileFetchError !== 'No such profile!') {
+                console.error('useAuth: Failed to fetch profile:', profileFetchError);
+                setProfile(null);
+            } else if (userProfile) {
               console.log('useAuth: Profile fetched successfully.');
               setProfile(userProfile);
             } else {
+              // This covers the case where the document doesn't exist (profileFetchError === 'No such profile!')
               console.warn('useAuth: User profile not found in database.');
               setProfile(null); // Set to null, not an error
             }
           } catch (profileError) {
-            console.error('useAuth: Failed to fetch profile:', profileError);
+             // Catch unexpected errors during the profile fetch itself
+            console.error('useAuth: Unexpected error fetching profile:', profileError);
             setProfile(null); // Set profile to null if fetch fails
           }
         } else {
@@ -49,7 +55,7 @@ export const AuthProvider = ({ children }) => {
           setProfile(null);
         }
       } catch (error) {
-        // Catch any other unexpected errors
+        // Catch any other unexpected errors in the auth listener
         console.error('useAuth: Critical error in onAuthChange:', error);
         setUser(null);
         setProfile(null);
@@ -75,15 +81,14 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {/* This is a good pattern, but you can also let the child 
-        screen decide what to show based on isLoading.
-        Your original code is fine:
+      {/* Render children regardless of loading state.
+          Individual screens should handle their own loading indicators
+          based on the isLoading prop from this hook.
       */}
-      {!isLoading && children}
+      {children}
     </AuthContext.Provider>
   );
 };
-
 
 export const useAuth = () => {
   return useContext(AuthContext);
