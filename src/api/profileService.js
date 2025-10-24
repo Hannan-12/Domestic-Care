@@ -18,10 +18,7 @@ import { firestoreDB } from './firebase';
 const PROFILES_COLLECTION = 'users'; 
 const REVIEWS_COLLECTION = 'reviews';
 
-/**
- * Creates a new user profile document in Firestore after registration.
- * This is typically called right after FR-1 (User Registration).
- */
+
 const createUserProfile = async (userId, profileData) => {
   // profileData should include { email, name, role: 'client' or 'provider' }
   try {

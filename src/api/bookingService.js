@@ -8,6 +8,7 @@ import {
   query,
   where,
   updateDoc,
+  Timestamp, // Import Timestamp
 } from 'firebase/firestore';
 import { ref, onValue, get, set } from 'firebase/database';
 import { firestoreDB, realtimeDB } from './firebase';
@@ -42,18 +43,22 @@ const getAvailableServices = async () => {
 const getProvidersForService = async (serviceId) => {
   try {
     // This assumes providers have their services listed in their profiles
-    // Also check the field name 'skills' and value 'serviceId' case
+    // CORRECTED: Query the 'users' collection to match Firestore and rules
     const providersQuery = query(
-      collection(firestoreDB, 'userProfiles'),
+      collection(firestoreDB, 'users'), // <--- FIXED HERE
       where('role', '==', 'provider'),
-      where('skills', 'array-contains', serviceId) // Ensure 'serviceId' case matches what's stored
+      where('skills', 'array-contains', serviceId) // Ensure 'skills' field exists and serviceId case matches
     );
 
     const querySnapshot = await getDocs(providersQuery);
-    const providers = querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const providers = querySnapshot.docs.map((doc) => {
+        const data = doc.data();
+        // Convert Timestamp if present
+        if (data.createdAt && data.createdAt.toDate) {
+            data.createdAt = data.createdAt.toDate();
+        }
+        return { id: doc.id, ...data };
+    });
     return { providers, error: null };
   } catch (error) {
     console.error("Error fetching providers: ", error); // Add console log
@@ -68,14 +73,17 @@ const getProvidersForService = async (serviceId) => {
  */
 const createBooking = async (bookingData) => {
   // bookingData should include:
-  // { userId, providerId, serviceId, scheduleTime, isImmediate, customNotes, status: 'confirmed' }
+  // { userId, providerId, serviceId, scheduleTime (JS Date), isRecurring, customNotes, status: 'confirmed' }
   try {
+    // Convert JS Dates back to Firestore Timestamps before saving
+    const dataToSave = {
+        ...bookingData,
+        scheduleTime: Timestamp.fromDate(bookingData.scheduleTime),
+        createdAt: Timestamp.fromDate(new Date()),
+    };
     const docRef = await addDoc(
       collection(firestoreDB, BOOKINGS_COLLECTION),
-      {
-        ...bookingData,
-        createdAt: new Date(),
-      }
+      dataToSave
     );
     return { bookingId: docRef.id, error: null };
   } catch (error) {
@@ -92,19 +100,21 @@ const getUserBookings = async (userId) => {
     const bookingsQuery = query(
       collection(firestoreDB, BOOKINGS_COLLECTION),
       where('userId', '==', userId)
+      // Consider adding: orderBy('scheduleTime', 'desc')
     );
     const querySnapshot = await getDocs(bookingsQuery);
-    const bookings = querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-    // Firestore Timestamps need conversion
-    const convertedBookings = bookings.map(booking => ({
-      ...booking,
-      createdAt: booking.createdAt?.toDate ? booking.createdAt.toDate() : booking.createdAt,
-      scheduleTime: booking.scheduleTime?.toDate ? booking.scheduleTime.toDate() : booking.scheduleTime,
-    }));
-    return { bookings: convertedBookings, error: null };
+    const bookings = querySnapshot.docs.map((doc) => {
+        const data = doc.data();
+        // Convert Firestore Timestamps back to JS Dates for UI
+        return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
+            scheduleTime: data.scheduleTime?.toDate ? data.scheduleTime.toDate() : data.scheduleTime,
+        };
+    });
+
+    return { bookings, error: null };
   } catch (error) {
     console.error("Error fetching user bookings: ", error); // Add console log
     return { bookings: [], error: error.message };
@@ -166,3 +176,4 @@ export const bookingService = {
   listenToProviderLocation,
   updateProviderLocation,
 };
+
