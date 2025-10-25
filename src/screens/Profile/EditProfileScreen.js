@@ -1,4 +1,4 @@
-// src/screens/Profile/EditProfileScreen.js
+
 import React, { useState } from 'react';
 import {
   View,
@@ -19,21 +19,13 @@ import Button from '../../components/common/Button';
 
 const EditProfileScreen = ({ navigation }) => {
   const { user, profile, refetchProfile } = useAuth();
-
   const [name, setName] = useState(profile?.name || '');
-  // avatarUrl state will now hold the Base64 string
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatarUrl || null);
   const [isPickingImage, setIsPickingImage] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
-  // --- 2. MODIFIED IMAGE PICKER FUNCTION ---
   const handlePickImage = async () => {
     setIsPickingImage(true);
-    
-    // 1. Get the Base64 string from the service
     const base64String = await imageService.pickAndCompressImageAsBase64();
-
-    // 2. If user didn't cancel, update the state
     if (base64String) {
       setAvatarUrl(base64String);
       Alert.alert('Success', 'Profile picture selected. Tap "Save Changes".');
@@ -41,8 +33,6 @@ const EditProfileScreen = ({ navigation }) => {
     
     setIsPickingImage(false);
   };
-  // --- END MODIFICATION ---
-
   const handleSave = async () => {
     if (!name) {
       Alert.alert('Error', 'Name cannot be empty.');
@@ -53,7 +43,7 @@ const EditProfileScreen = ({ navigation }) => {
 
     const updatedData = {
       name: name,
-      avatarUrl: avatarUrl, // <-- This now saves the Base64 string to Firestore
+      avatarUrl: avatarUrl, 
     };
 
     const { success, error } = await profileService.updateUserProfile(
@@ -75,12 +65,11 @@ const EditProfileScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
-        {/* --- 3. IMAGE UI (No logic change, just a loading state) --- */}
+        {}
         <View style={styles.avatarContainer}>
           <Image
             style={styles.avatar}
             source={{
-              // The Image component can render Base64 data URIs
               uri: avatarUrl || 'https://via.placeholder.com/100',
             }}
           />
@@ -113,7 +102,6 @@ const EditProfileScreen = ({ navigation }) => {
   );
 };
 
-// --- 4. STYLES (Simplified) ---
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
