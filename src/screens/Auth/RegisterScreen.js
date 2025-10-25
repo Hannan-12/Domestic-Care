@@ -44,10 +44,7 @@ const RegisterScreen = ({ navigation }) => {
     setIsLoading(true);
     setError(null);
 
-    const { user, error: authError } = await authService.registerWithEmail(
-      email,
-      password
-    );
+    const { user, error: authError } = await authService.registerWithEmail(email, password);
 
     if (authError) {
       setIsLoading(false);
@@ -73,7 +70,7 @@ const RegisterScreen = ({ navigation }) => {
       await profileService.createUserProfile(user.uid, profileData);
 
     if (profileError) {
-      console.error("Error creating profile:", profileError);
+      console.error('Error creating profile:', profileError);
       Alert.alert(
         'Registration Error',
         'Your account was created, but we failed to save your profile. Please contact support.'
@@ -95,40 +92,10 @@ const RegisterScreen = ({ navigation }) => {
         <Text style={styles.title}>Create Account</Text>
         <Text style={styles.subtitle}>Sign up to get started</Text>
 
-        <Input
-          label="Full Name"
-          placeholder="Your full name"
-          value={name}
-          onChangeText={setName}
-          error={error && error.includes('name') ? error : null}
-        />
-
-        <Input
-          label="Email"
-          placeholder="you@example.com"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          error={error && (error.includes('email') || error.includes('valid')) ? error : null}
-        />
-
-        <Input
-          label="Password"
-          placeholder="Minimum 6 characters"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          error={error && (error.includes('password') || error.includes('6 characters')) ? error : null}
-        />
-
-        <Input
-          label="Confirm Password"
-          placeholder="Repeat your password"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          secureTextEntry
-          error={error && error.includes('match') ? error : null}
-        />
+        <Input label="Full Name" placeholder="Your full name" value={name} onChangeText={setName} />
+        <Input label="Email" placeholder="you@example.com" value={email} onChangeText={setEmail} keyboardType="email-address" />
+        <Input label="Password" placeholder="Minimum 6 characters" value={password} onChangeText={setPassword} secureTextEntry />
+        <Input label="Confirm Password" placeholder="Repeat your password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
 
         <View style={styles.switchContainer}>
           <Text style={styles.switchLabel}>Are you a Service Provider?</Text>
@@ -140,16 +107,9 @@ const RegisterScreen = ({ navigation }) => {
           />
         </View>
 
-        {error && !(error.includes('name') || error.includes('email') || error.includes('password') || error.includes('match') || error.includes('6 characters') || error.includes('valid')) && (
-          <Text style={styles.generalError}>{error}</Text>
-        )}
+        {error && <Text style={styles.generalError}>{error}</Text>}
 
-        <Button
-          title="Sign Up"
-          onPress={handleRegister}
-          loading={isLoading}
-          style={styles.registerButton}
-        />
+        <Button title="Sign Up" onPress={handleRegister} loading={isLoading} style={styles.registerButton} />
 
         <TouchableOpacity onPress={() => navigation.navigate('Login')}>
           <Text style={styles.loginLink}>
@@ -169,43 +129,43 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: 24,
+    padding: 16, // reduced from 24
   },
   logo: {
-    width: 150,
-    height: 150,
+    width: 130, // reduced size
+    height: 130,
     alignSelf: 'center',
-    marginBottom: 24,
+    marginBottom: 16, // reduced from 24
   },
   title: {
-    fontSize: 28,
+    fontSize: 26, // slightly smaller
     fontWeight: 'bold',
     color: COLORS.primary || '#006270',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 6, // reduced from 8
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: COLORS.greyDark || '#555555',
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 20, // reduced from 32
   },
   switchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginVertical: 16,
-    paddingHorizontal: 8,
+    marginVertical: 10, // reduced from 16
+    paddingHorizontal: 4, // reduced from 8
   },
   switchLabel: {
-    fontSize: 16,
+    fontSize: 15,
     color: COLORS.darkText || '#333333',
   },
   registerButton: {
-    marginTop: 16,
+    marginTop: 12, // reduced from 16
   },
   loginLink: {
-    marginTop: 24,
+    marginTop: 16, // reduced from 24
     textAlign: 'center',
     color: COLORS.greyDark || '#555555',
   },
@@ -216,7 +176,7 @@ const styles = StyleSheet.create({
   generalError: {
     color: COLORS.danger || '#D9534F',
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: 8, // reduced from 10
     fontSize: 14,
   },
 });
