@@ -1,90 +1,89 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
+// src/hooks/useAuth.js
+import React, { useState, useEffect, createContext, useContext, useCallback } from 'react'; // 1. Import useCallback
 import { authService } from '../api/authService';
 import { profileService } from '../api/profileService';
 
-// Create a context to hold the auth state
 const AuthContext = createContext();
 
-/**
- * This is the provider component. Wrap your entire app in this
- * (e.g., in App.js) to make the auth state available everywhere.
- */
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null); // The Firebase auth user object
-  const [profile, setProfile] = useState(null); // The user's profile from Firestore
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // --- 2. NEW FUNCTION TO FETCH PROFILE ---
+  // We put this in a useCallback so we can pass it to other screens
+  const fetchProfile = useCallback(async (authUser) => {
+    if (!authUser) {
+      setUser(null);
+      setProfile(null);
+      return;
+    }
+    
+    setUser(authUser);
+    console.log('useAuth: User found, fetching profile...', authUser.uid);
+    try {
+      const { profile: userProfile, error: profileFetchError } =
+        await profileService.getUserProfile(authUser.uid);
+
+      if (profileFetchError && profileFetchError !== 'No such profile!') {
+        console.error('useAuth: Failed to fetch profile:', profileFetchError);
+        setProfile(null);
+      } else if (userProfile) {
+        console.log('useAuth: Profile fetched successfully.');
+        setProfile(userProfile);
+      } else {
+        console.warn('useAuth: User profile not found in database.');
+        setProfile(null);
+      }
+    } catch (profileError) {
+      console.error('useAuth: Unexpected error fetching profile:', profileError);
+      setProfile(null);
+    }
+  }, []); // Empty dependency array
+
   useEffect(() => {
-    // onAuthChange returns an "unsubscribe" function
     const unsubscribe = authService.onAuthChange(async (authUser) => {
-      // Use try...catch...finally to handle all cases
       try {
         if (authUser) {
-          // User is logged in
-          setUser(authUser);
-          console.log('useAuth: User found, fetching profile...', authUser.uid);
-
-          // Now fetch their profile data from Firestore
-          // This call must be wrapped in its own try/catch in case ONLY it fails
-          try {
-            const { profile: userProfile, error: profileFetchError } = await profileService.getUserProfile(
-              authUser.uid
-            );
-
-            // Check for explicit error from the service first
-            if (profileFetchError && profileFetchError !== 'No such profile!') {
-                console.error('useAuth: Failed to fetch profile:', profileFetchError);
-                setProfile(null);
-            } else if (userProfile) {
-              console.log('useAuth: Profile fetched successfully.');
-              setProfile(userProfile);
-            } else {
-              // This covers the case where the document doesn't exist (profileFetchError === 'No such profile!')
-              console.warn('useAuth: User profile not found in database.');
-              setProfile(null); // Set to null, not an error
-            }
-          } catch (profileError) {
-             // Catch unexpected errors during the profile fetch itself
-            console.error('useAuth: Unexpected error fetching profile:', profileError);
-            setProfile(null); // Set profile to null if fetch fails
-          }
+          await fetchProfile(authUser); // 3. Call our new function
         } else {
-          // User is logged out
           console.log('useAuth: User is logged out.');
           setUser(null);
           setProfile(null);
         }
       } catch (error) {
-        // Catch any other unexpected errors in the auth listener
         console.error('useAuth: Critical error in onAuthChange:', error);
         setUser(null);
         setProfile(null);
       } finally {
-        // THIS IS THE MOST IMPORTANT PART
-        // It runs no matter what, ensuring the app never hangs
         console.log('useAuth: Setting isLoading to false.');
         setIsLoading(false);
       }
     });
 
-    // Cleanup subscription on unmount
     return () => unsubscribe();
-  }, []);
+  }, [fetchProfile]); // 4. Add fetchProfile as a dependency
 
-  // The value provided to consuming components
+  // --- 5. NEW FUNCTION TO EXPOSE ---
+  // This function allows other screens to trigger a profile refetch
+  const refetchProfile = useCallback(async () => {
+    if (user) {
+      console.log('useAuth: Manual refetch triggered.');
+      await fetchProfile(user);
+    }
+  }, [user, fetchProfile]);
+
+  // 6. Provide 'refetchProfile' in the context value
   const value = {
     user,
     profile,
     isLoggedIn: !!user,
     isLoading,
+    refetchProfile, // <-- ADDED
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {/* Render children regardless of loading state.
-          Individual screens should handle their own loading indicators
-          based on the isLoading prop from this hook.
-      */}
       {children}
     </AuthContext.Provider>
   );

@@ -8,36 +8,30 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-// MODIFIED IMPORT
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../hooks/useAuth';
-import { bookingService } from '../../api/bookingService'; // <-- IMPORT SERVICE
+import { bookingService } from '../../api/bookingService';
 import { COLORS } from '../../constants/colors';
 import Card from '../../components/common/Card';
-import { useIsFocused } from '@react-navigation/native'; // <-- IMPORT useIsFocused
+import Button from '../../components/common/Button'; // <-- IMPORT Button
+import { useIsFocused } from '@react-navigation/native';
 
-/**
- * This is the "Home" screen for Providers.
- * It now lists all bookings assigned to them.
- */
 const ProviderDashboardScreen = ({ navigation }) => {
   const { user } = useAuth();
-  const isFocused = useIsFocused(); // Hook to refetch when tab is visited
+  const isFocused = useIsFocused();
   const [bookings, setBookings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Re-fetch when the screen comes into focus
     if (user && isFocused) {
       fetchProviderBookings();
     }
-  }, [user, isFocused]); // <-- ADD isFocused dependency
+  }, [user, isFocused]);
 
   const fetchProviderBookings = async () => {
     setIsLoading(true);
     setError(null);
-    // Call the new function we created
     const { bookings: fetchedBookings, error: fetchError } =
       await bookingService.getProviderBookings(user.uid);
 
@@ -50,6 +44,33 @@ const ProviderDashboardScreen = ({ navigation }) => {
     setIsLoading(false);
   };
 
+  // --- NEW FUNCTION ---
+  const handleCancelBooking = (bookingId) => {
+    Alert.alert(
+      'Cancel Booking',
+      'Are you sure you want to cancel this booking? This will notify the client.',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes, Cancel',
+          style: 'destructive',
+          onPress: async () => {
+            const { success, error } =
+              await bookingService.updateBookingStatus(bookingId, 'cancelled');
+
+            if (error) {
+              Alert.alert('Error', 'Failed to cancel booking.');
+            } else {
+              Alert.alert('Success', 'Booking has been cancelled.');
+              fetchProviderBookings(); // Refresh the list
+            }
+          },
+        },
+      ]
+    );
+  };
+  // --- END NEW FUNCTION ---
+
   if (isLoading) {
     return (
       <View style={styles.centered}>
@@ -58,31 +79,46 @@ const ProviderDashboardScreen = ({ navigation }) => {
     );
   }
 
-  // --- MODIFY THIS FUNCTION ---
-  const renderBookingCard = ({ item }) => (
-    <Card style={styles.bookingCard}>
-      <Text style={styles.bookingTitle}>Booking Details</Text>
+  // --- MODIFIED RENDER FUNCTION ---
+  const renderBookingCard = ({ item }) => {
+    // Only show "Cancel" button if the booking is 'confirmed'
+    const isConfirmed = item.status === 'confirmed';
 
-      {/* CHANGED LINE: Show clientName */}
-      <Text style={styles.bookingInfo}>
-        Client: {item.clientName}
-      </Text>
-
-      {/* CHANGED LINE: Show serviceName */}
-      <Text style={styles.bookingInfo}>
-        Service: {item.serviceName}
-      </Text>
-
-      <Text style={styles.bookingInfo}>
-        When: {item.scheduleTime.toLocaleString()}
-      </Text>
-      <View style={styles.statusContainer}>
-        <Text style={styles.statusText}>
-          {(item.status || 'Unknown').toUpperCase()}
+    return (
+      <Card style={styles.bookingCard}>
+        <Text style={styles.bookingTitle}>Booking Details</Text>
+        <Text style={styles.bookingInfo}>
+          Client: {item.clientName}
         </Text>
-      </View>
-    </Card>
-  );
+        <Text style={styles.bookingInfo}>
+          Service: {item.serviceName}
+        </Text>
+        <Text style={styles.bookingInfo}>
+          When: {item.scheduleTime.toLocaleString()}
+        </Text>
+        <View style={styles.statusContainer}>
+          <Text style={styles.statusText}>
+            {(item.status || 'Unknown').toUpperCase()}
+          </Text>
+        </View>
+
+        {/* --- NEW BUTTONS SECTION --- */}
+        {isConfirmed && (
+          <View style={styles.buttonRow}>
+            {/* You could add a "Start Job" button here later */}
+            <Button
+              title="Cancel Booking"
+              onPress={() => handleCancelBooking(item.id)}
+              style={[styles.cardButton, styles.cancelButton]}
+              textStyle={styles.cancelButtonText}
+              type="secondary"
+            />
+          </View>
+        )}
+        {/* --- END NEW BUTTONS SECTION --- */}
+      </Card>
+    );
+  };
   // --- END MODIFICATION ---
 
   return (
@@ -109,6 +145,7 @@ const ProviderDashboardScreen = ({ navigation }) => {
   );
 };
 
+// --- MODIFIED STYLES ---
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -143,12 +180,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.primary,
-    marginBottom: 8, // Added margin
+    marginBottom: 8,
   },
   bookingInfo: {
-    fontSize: 16, // Made text larger
+    fontSize: 16,
     color: COLORS.darkText,
-    marginVertical: 4, // Added vertical margin
+    marginVertical: 4,
   },
   statusContainer: {
     paddingHorizontal: 12,
@@ -163,6 +200,28 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.primary,
   },
+  // --- NEW STYLES FOR BUTTONS ---
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end', // Aligns button to the right
+    marginTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.greyLight,
+    paddingTop: 16,
+  },
+  cardButton: {
+    flex: 0.5, // Make button take half the space
+    marginHorizontal: 4,
+    paddingVertical: 10,
+  },
+  cancelButton: {
+    borderColor: COLORS.danger,
+  },
+  cancelButtonText: {
+    color: COLORS.danger,
+    fontSize: 14,
+  },
+  // --- END NEW STYLES ---
 });
 
 export default ProviderDashboardScreen;

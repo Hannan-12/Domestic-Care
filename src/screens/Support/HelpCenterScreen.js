@@ -3,10 +3,10 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Card from '../../components/common/Card';
 import { COLORS } from '../../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
  * @param {object} props.navigation - React Navigation prop
  */
 const HelpCenterScreen = ({ navigation }) => {
+  // <-- 2. GET NAVIGATION PROP
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
@@ -26,28 +27,27 @@ const HelpCenterScreen = ({ navigation }) => {
         <Card style={styles.menuCard}>
           <SupportMenuItem
             icon="help-circle-outline"
-            label="FAQs & Help Guides (FR-19)"
-            onPress={() => {
-              /* Navigate to FAQs Screen */
-            }}
+            label="FAQs & Help Guides "
+            // --- 3. ADD NAVIGATION ---
+            onPress={() => navigation.navigate('FaqsScreen')}
           />
           <SupportMenuItem
             icon="chatbubble-ellipses-outline"
-            label="24/7 Chatbot Support (FR-17)"
+            label="24/7 Chatbot Support "
             onPress={() => {
               /* Navigate to Chatbot Screen */
             }}
           />
           <SupportMenuItem
             icon="call-outline"
-            label="Call Center (FR-18)"
+            label="Call Center "
             onPress={() => {
               /* Initiate call or show number */
             }}
           />
           <SupportMenuItem
             icon="ticket-outline"
-            label="Submit a Ticket (FR-20)"
+            label="Submit a Ticket "
             onPress={() => {
               /* Navigate to Ticket Submission Screen */
             }}

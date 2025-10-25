@@ -17,18 +17,10 @@ import Card from '../../components/common/Card';
 import { COLORS } from '../../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 
-/**
- * User Profile Screen (Module 1)
- * Now conditionally shows provider-specific options.
- *
- * @param {object} props
- * @param {object} props.navigation - React Navigation prop
- */
 const UserProfileScreen = ({ navigation }) => {
-  const { profile, user, isLoading } = useAuth(); // No change here
+  const { profile, user, isLoading } = useAuth();
 
   const handleLogout = async () => {
-    // ... (your existing logout logic is fine)
     Alert.alert('Log Out', 'Are you sure you want to log out?', [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -41,7 +33,6 @@ const UserProfileScreen = ({ navigation }) => {
     ]);
   };
 
-  // Helper component for menu items (no change)
   const ProfileMenuItem = ({ icon, label, onPress }) => (
     <TouchableOpacity style={styles.menuItem} onPress={onPress}>
       <Ionicons name={icon} size={24} color={COLORS.primary} />
@@ -50,7 +41,6 @@ const UserProfileScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
-  // Loading state (no change)
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -61,7 +51,6 @@ const UserProfileScreen = ({ navigation }) => {
     );
   }
 
-  // Profile error state (no change)
   if (!profile && user) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -73,7 +62,6 @@ const UserProfileScreen = ({ navigation }) => {
     );
   }
 
-  // Logged out state (no change)
   if (!user) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -84,7 +72,6 @@ const UserProfileScreen = ({ navigation }) => {
     );
   }
 
-  // <-- 1. CHECK THE USER'S ROLE
   const isProvider = profile.role === 'provider';
 
   return (
@@ -99,7 +86,6 @@ const UserProfileScreen = ({ navigation }) => {
           />
           <Text style={styles.name}>{profile.name}</Text>
           <Text style={styles.email}>{user?.email}</Text>
-          {/* 2. SHOW ROLE BADGE (Optional but helpful) */}
           {isProvider && (
             <View style={styles.roleBadge}>
               <Text style={styles.roleText}>Provider Account</Text>
@@ -107,7 +93,6 @@ const UserProfileScreen = ({ navigation }) => {
           )}
         </View>
 
-        {/* <-- 3. PROVIDER-SPECIFIC MENU --> */}
         {isProvider && (
           <Card style={styles.menuCard}>
             <ProfileMenuItem
@@ -122,16 +107,16 @@ const UserProfileScreen = ({ navigation }) => {
             />
           </Card>
         )}
-        {/* <-- END OF PROVIDER MENU --> */}
 
         <Card style={styles.menuCard}>
+          {/* --- THIS IS THE FIX --- */}
           <ProfileMenuItem
             icon="person-outline"
             label="Edit Profile"
-            onPress={() => {
-              /* navigation.navigate('EditProfileScreen') */
-            }}
+            onPress={() => navigation.navigate('EditProfileScreen')}
           />
+          {/* -------------------- */}
+          
           <ProfileMenuItem
             icon="settings-outline"
             label="Settings"
@@ -154,12 +139,12 @@ const UserProfileScreen = ({ navigation }) => {
           style={styles.logoutButton}
           type="secondary"
         />
-      </ScrollView>
+      </ScrollView
+>
     </SafeAreaView>
   );
 };
 
-// --- STYLES (with additions) ---
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -195,7 +180,6 @@ const styles = StyleSheet.create({
     color: COLORS.greyDark,
     marginTop: 4,
   },
-  // <-- 4. NEW STYLES FOR ROLE BADGE
   roleBadge: {
     backgroundColor: COLORS.primaryLight,
     borderColor: COLORS.primary,
@@ -210,10 +194,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
-  // <-- END NEW STYLES
   menuCard: {
     paddingVertical: 8,
-    marginBottom: 16, // Add margin between cards
+    marginBottom: 16,
   },
   menuItem: {
     flexDirection: 'row',
@@ -230,7 +213,7 @@ const styles = StyleSheet.create({
     marginLeft: 16,
   },
   logoutButton: {
-    marginTop: 16, // Reduced margin
+    marginTop: 16,
     borderColor: COLORS.danger,
   },
   errorText: {

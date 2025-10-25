@@ -1,4 +1,3 @@
-// src/api/bookingService.js
 import {
   collection,
   addDoc,
@@ -12,13 +11,12 @@ import {
 } from 'firebase/firestore';
 import { ref, onValue, get, set } from 'firebase/database';
 import { firestoreDB, realtimeDB } from './firebase';
-import { profileService } from './profileService'; // Import profileService
+import { profileService } from './profileService';
 
 const SERVICES_COLLECTION = 'Services';
 const BOOKINGS_COLLECTION = 'bookings';
 const PROVIDER_LOCATIONS_REF = 'providerLocations';
 
-// Helper function to get a single service's details
 const getServiceDetails = async (serviceId) => {
   try {
     const serviceDocRef = doc(firestoreDB, SERVICES_COLLECTION, serviceId);
@@ -89,7 +87,6 @@ const createBooking = async (bookingData) => {
   }
 };
 
-// --- MODIFIED getUserBookings ---
 const getUserBookings = async (userId) => {
   try {
     const bookingsQuery = query(
@@ -112,13 +109,11 @@ const getUserBookings = async (userId) => {
       };
     });
 
-    // --- ENRICHMENT LOGIC (NEW) ---
     const enrichedBookings = await Promise.all(
       bookingsData.map(async (booking) => {
         let providerName = 'Unknown Provider';
         let serviceName = 'Unknown Service';
 
-        // Fetch provider name
         if (booking.providerId) {
           const { profile } = await profileService.getUserProfile(
             booking.providerId
@@ -128,7 +123,6 @@ const getUserBookings = async (userId) => {
           }
         }
 
-        // Fetch service name
         if (booking.serviceId) {
           const { service } = await getServiceDetails(booking.serviceId);
           if (service && service.Name) {
@@ -144,19 +138,16 @@ const getUserBookings = async (userId) => {
       })
     );
 
-    // Sort bookings by date, newest first
     const sortedBookings = enrichedBookings.sort(
       (a, b) => b.scheduleTime - a.scheduleTime
     );
 
     return { bookings: sortedBookings, error: null };
-    // --- END ENRICHMENT ---
   } catch (error) {
     console.error('Error fetching user bookings: ', error);
     return { bookings: [], error: error.message };
   }
 };
-// --- END MODIFICATION ---
 
 const getProviderBookings = async (providerId) => {
   try {
@@ -180,13 +171,11 @@ const getProviderBookings = async (providerId) => {
       };
     });
 
-    // Now, enrich the data with client and service names
     const enrichedBookings = await Promise.all(
       bookingsData.map(async (booking) => {
         let clientName = 'Unknown Client';
         let serviceName = 'Unknown Service';
 
-        // Fetch client name
         if (booking.userId) {
           const { profile } = await profileService.getUserProfile(booking.userId);
           if (profile && profile.name) {
@@ -194,7 +183,6 @@ const getProviderBookings = async (providerId) => {
           }
         }
 
-        // Fetch service name
         if (booking.serviceId) {
           const { service } = await getServiceDetails(booking.serviceId);
           if (service && service.Name) {
@@ -210,7 +198,6 @@ const getProviderBookings = async (providerId) => {
       })
     );
 
-    // Sort bookings by date, newest first
     const sortedBookings = enrichedBookings.sort(
       (a, b) => b.scheduleTime - a.scheduleTime
     );
@@ -263,6 +250,19 @@ const updateProviderLocation = async (providerId, location) => {
   }
 };
 
+const updateBookingStatus = async (bookingId, newStatus) => {
+  try {
+    const bookingDocRef = doc(firestoreDB, BOOKINGS_COLLECTION, bookingId);
+    await updateDoc(bookingDocRef, {
+      status: newStatus,
+    });
+    return { success: true, error: null };
+  } catch (error) {
+    console.error('Error updating booking status: ', error);
+    return { success: false, error: error.message };
+  }
+};
+
 export const bookingService = {
   getAvailableServices,
   getProvidersForService,
@@ -272,4 +272,5 @@ export const bookingService = {
   updateProviderLocation,
   getProviderBookings,
   getServiceDetails,
+  updateBookingStatus,
 };

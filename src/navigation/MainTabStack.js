@@ -3,24 +3,23 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants/colors';
-import { View, ActivityIndicator } from 'react-native'; // Import loading components
-import { useAuth } from '../hooks/useAuth'; // <-- 1. IMPORT useAuth
+import { View, ActivityIndicator } from 'react-native';
+import { useAuth } from '../hooks/useAuth';
 
 // Import the stack navigators for each tab
 import HomeStack from './HomeStack';
 import BookingStack from './BookingStack';
 import ProfileStack from './ProfileStack';
 import SupportStack from './SupportStack';
-import ProviderHomeStack from './ProviderHomeStack'; // <-- 2. IMPORT ProviderHomeStack
+import ProviderHomeStack from './ProviderHomeStack';
 
 const Tab = createBottomTabNavigator();
 
 /**
  * The main Bottom Tab Navigator for the app.
- * It now conditionally renders the 'Home' tab based on user role.
+ * It now conditionally renders tabs based on user role.
  */
 const MainTabStack = () => {
-  // <-- 3. GET USER PROFILE AND LOADING STATE
   const { profile, isLoading } = useAuth();
 
   // Show a loading spinner while we wait for the profile to load
@@ -38,7 +37,6 @@ const MainTabStack = () => {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        // Hide the header here because each stack has its own
         headerShown: false,
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.greyDark,
@@ -50,11 +48,10 @@ const MainTabStack = () => {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
 
-          // <-- 4. ADJUST ICON NAME FOR ROLE
+          // Set icon based on route name
           if (route.name === 'Home') {
             iconName = focused ? 'home' : 'home-outline';
           } else if (route.name === 'Dashboard') {
-            // New icon for Provider 'Dashboard'
             iconName = focused ? 'briefcase' : 'briefcase-outline';
           } else if (route.name === 'Bookings') {
             iconName = focused ? 'calendar' : 'calendar-outline';
@@ -70,27 +67,32 @@ const MainTabStack = () => {
         },
       })}
     >
-      {/*
-       * <-- 5. CONDITIONAL NAVIGATION
-       * Show 'Home' for clients, 'Dashboard' for providers.
-       */}
+      {/* --- MODIFIED CONDITIONAL TABS --- */}
       {isProvider ? (
-        <Tab.Screen
-          name="Dashboard"
-          component={ProviderHomeStack}
-        />
+        // --- TABS FOR PROVIDERS ---
+        <>
+          <Tab.Screen
+            name="Dashboard"
+            component={ProviderHomeStack}
+          />
+          {/* "Bookings" tab is now hidden for providers */}
+        </>
       ) : (
-        <Tab.Screen
-          name="Home"
-          component={HomeStack}
-        />
+        // --- TABS FOR CLIENTS ---
+        <>
+          <Tab.Screen
+            name="Home"
+            component={HomeStack}
+          />
+          <Tab.Screen
+            name="Bookings"
+            component={BookingStack}
+          />
+        </>
       )}
-      {/* END OF CONDITIONAL NAVIGATION */}
+      {/* --- END OF CONDITIONAL TABS --- */}
 
-      <Tab.Screen
-        name="Bookings"
-        component={BookingStack}
-      />
+      {/* --- SHARED TABS (for both roles) --- */}
       <Tab.Screen
         name="Profile"
         component={ProfileStack}
