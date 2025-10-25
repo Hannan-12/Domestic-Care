@@ -5,11 +5,14 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  SafeAreaView,
   ActivityIndicator,
   Alert,
   TouchableOpacity,
 } from 'react-native';
+// --- MODIFIED IMPORTS ---
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons'; // Added for icons
+// --- END MODIFIED IMPORTS ---
 import { useAuth } from '../../hooks/useAuth';
 import { bookingService } from '../../api/bookingService';
 import Card from '../../components/common/Card';
@@ -19,9 +22,6 @@ import { useIsFocused } from '@react-navigation/native';
 /**
  * Screen to show a user's past and upcoming bookings (Module 3)
  * This is the main "Bookings" tab.
- *
- * @param {object} props
- * @param {object} props.navigation - React Navigation prop
  */
 const BookingStatusScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -39,6 +39,7 @@ const BookingStatusScreen = ({ navigation }) => {
   const fetchUserBookings = async () => {
     setIsLoading(true);
     setError(null);
+    // This function now returns enriched data (providerName, serviceName)
     const { bookings: fetchedBookings, error: fetchError } =
       await bookingService.getUserBookings(user.uid);
 
@@ -46,12 +47,8 @@ const BookingStatusScreen = ({ navigation }) => {
       setError(fetchError);
       Alert.alert('Error', 'Could not fetch your bookings.');
     } else {
-      // Sort bookings by date, newest first
-      // Corrected: Directly compare Date objects
-      const sortedBookings = fetchedBookings.sort((a, b) =>
-        b.scheduleTime - a.scheduleTime
-      );
-      setBookings(sortedBookings);
+      // Data is already sorted by the service
+      setBookings(fetchedBookings);
     }
     setIsLoading(false);
   };
@@ -59,21 +56,22 @@ const BookingStatusScreen = ({ navigation }) => {
   const handleBookingPress = (booking) => {
     // If the booking is active, navigate to live tracking (FR-9)
     if (booking.status === 'in-progress' || booking.status === 'confirmed') {
-      // Ensure providerId is passed correctly
       if (booking.providerId) {
-          navigation.navigate('LiveTrackingScreen', { bookingId: booking.id, providerId: booking.providerId });
+        navigation.navigate('LiveTrackingScreen', {
+          bookingId: booking.id,
+          providerId: booking.providerId,
+        });
       } else {
-          Alert.alert("Error", "Provider information is missing for this booking.");
+        Alert.alert('Error', 'Provider information is missing for this booking.');
       }
     } else if (booking.status === 'completed') {
-       // Optional: Navigate to a review screen if needed (FR-13)
-       // navigation.navigate('RateProviderScreen', { booking });
-       Alert.alert("Booking Completed", "This booking is already completed.");
+      // Optional: Navigate to a review screen if needed (FR-13)
+      // navigation.navigate('RateProviderScreen', { booking });
+      Alert.alert('Booking Completed', 'This booking is already completed.');
     } else {
-       Alert.alert("Booking Status", `This booking is currently: ${booking.status}`);
+      Alert.alert('Booking Status', `This booking is currently: ${booking.status}`);
     }
   };
-
 
   if (isLoading) {
     return (
@@ -83,37 +81,53 @@ const BookingStatusScreen = ({ navigation }) => {
     );
   }
 
+  // --- MODIFIED RENDER FUNCTION ---
   const renderBookingCard = ({ item }) => {
-     // Check if scheduleTime is a valid Date object before formatting
-     const displayDate = item.scheduleTime instanceof Date
-       ? item.scheduleTime.toLocaleString()
-       : 'Invalid Date';
+    // Check if scheduleTime is a valid Date object before formatting
+    const displayDate =
+      item.scheduleTime instanceof Date
+        ? item.scheduleTime.toLocaleString()
+        : 'Invalid Date';
 
-     return (
-        <TouchableOpacity onPress={() => handleBookingPress(item)}>
-          <Card style={styles.bookingCard}>
-            <View>
-              {/* Consider fetching and showing service name */}
-              <Text style={styles.bookingService}>Service ID: {item.serviceId}</Text>
-              {/* Corrected: Directly format the Date object */}
-              <Text style={styles.bookingDate}>
-                {displayDate}
-              </Text>
-              {/* Consider fetching and showing provider name */}
+    return (
+      <TouchableOpacity onPress={() => handleBookingPress(item)}>
+        <Card style={styles.bookingCard}>
+          <View style={styles.bookingDetails}>
+            {/* CHANGED: Show serviceName */}
+            <Text style={styles.bookingService}>{item.serviceName}</Text>
+
+            {/* IMPROVED: Added icon */}
+            <View style={styles.detailRow}>
+              <Ionicons
+                name="person-outline"
+                size={16}
+                color={COLORS.greyDark}
+              />
               <Text style={styles.bookingProvider}>
-                Provider ID: {item.providerId || 'N/A'}
+                {item.providerName || 'N/A'}
               </Text>
             </View>
-            <View style={styles.statusContainer}>
-              <Text style={[styles.statusText, getStatusColor(item.status)]}>
-                {(item.status || 'Unknown').toUpperCase()}
-              </Text>
-            </View>
-          </Card>
-        </TouchableOpacity>
-     );
-  };
 
+            {/* IMPROVED: Added icon */}
+            <View style={styles.detailRow}>
+              <Ionicons
+                name="calendar-outline"
+                size={16}
+                color={COLORS.greyDark}
+              />
+              <Text style={styles.bookingDate}>{displayDate}</Text>
+            </View>
+          </View>
+          <View style={styles.statusContainer}>
+            <Text style={[styles.statusText, getStatusColor(item.status)]}>
+              {(item.status || 'Unknown').toUpperCase()}
+            </Text>
+          </View>
+        </Card>
+      </TouchableOpacity>
+    );
+  };
+  // --- END MODIFICATION ---
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -152,6 +166,7 @@ const BookingStatusScreen = ({ navigation }) => {
   );
 };
 
+// --- MODIFIED STYLES ---
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -181,35 +196,46 @@ const styles = StyleSheet.create({
   bookingCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'center', // Align items vertically
     padding: 16,
-    marginVertical: 8, // Add some vertical margin
+    marginVertical: 8,
+  },
+  bookingDetails: {
+    flex: 1, // Take up available space
   },
   bookingService: {
-    fontSize: 16,
+    fontSize: 18, // Make service name bigger
     fontWeight: 'bold',
-    color: COLORS.darkText,
+    color: COLORS.primary, // Use primary color
+    marginBottom: 8, // Add spacing
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 4,
   },
   bookingDate: {
     fontSize: 14,
     color: COLORS.greyDark,
-    marginVertical: 4,
+    marginLeft: 8, // Space from icon
   },
   bookingProvider: {
     fontSize: 14,
     color: COLORS.greyDark,
+    marginLeft: 8, // Space from icon
   },
   statusContainer: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
     backgroundColor: COLORS.greyLight,
-    alignSelf: 'flex-start', // Align status to top
+    alignSelf: 'center', // Center it vertically
   },
   statusText: {
     fontSize: 12,
     fontWeight: 'bold',
   },
 });
+// --- END MODIFICATION ---
 
 export default BookingStatusScreen;

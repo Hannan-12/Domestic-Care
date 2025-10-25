@@ -8,19 +8,33 @@ import {
   query,
   where,
   updateDoc,
-  Timestamp, // Import Timestamp
+  Timestamp,
 } from 'firebase/firestore';
 import { ref, onValue, get, set } from 'firebase/database';
 import { firestoreDB, realtimeDB } from './firebase';
+import { profileService } from './profileService'; // Import profileService
 
-const SERVICES_COLLECTION = 'Services'; // Corrected: Capital 'S'
+const SERVICES_COLLECTION = 'Services';
 const BOOKINGS_COLLECTION = 'bookings';
-const PROVIDER_LOCATIONS_REF = 'providerLocations'; // Using Realtime DB for live location
+const PROVIDER_LOCATIONS_REF = 'providerLocations';
 
-/**
- * Fetches the list of available services (Housekeeping, Pet Care, etc.)
- * Corresponds to FR-5
- */
+// Helper function to get a single service's details
+const getServiceDetails = async (serviceId) => {
+  try {
+    const serviceDocRef = doc(firestoreDB, SERVICES_COLLECTION, serviceId);
+    const docSnap = await getDoc(serviceDocRef);
+
+    if (docSnap.exists()) {
+      return { service: { id: docSnap.id, ...docSnap.data() }, error: null };
+    } else {
+      return { service: null, error: 'No such service!' };
+    }
+  } catch (error) {
+    console.error('Error fetching service details:', error);
+    return { service: null, error: error.message };
+  }
+};
+
 const getAvailableServices = async () => {
   try {
     const servicesQuery = query(collection(firestoreDB, SERVICES_COLLECTION));
@@ -31,55 +45,38 @@ const getAvailableServices = async () => {
     }));
     return { services, error: null };
   } catch (error) {
-    console.error("Error fetching services: ", error); // Add console log
+    console.error('Error fetching services: ', error);
     return { services: [], error: error.message };
   }
 };
-
-/**
- * Searches for providers based on service type.
- * This can be expanded with more filters (time, location) as per FR-5
- */
 const getProvidersForService = async (serviceId) => {
   try {
-    // This assumes providers have their services listed in their profiles
-    // CORRECTED: Query the 'users' collection to match Firestore and rules
     const providersQuery = query(
-      collection(firestoreDB, 'users'), // <--- FIXED HERE
+      collection(firestoreDB, 'users'),
       where('role', '==', 'provider'),
-      where('skills', 'array-contains', serviceId) // Ensure 'skills' field exists and serviceId case matches
+      where('skills', 'array-contains', serviceId)
     );
 
     const querySnapshot = await getDocs(providersQuery);
     const providers = querySnapshot.docs.map((doc) => {
-        const data = doc.data();
-        // Convert Timestamp if present
-        if (data.createdAt && data.createdAt.toDate) {
-            data.createdAt = data.createdAt.toDate();
-        }
-        return { id: doc.id, ...data };
+      const data = doc.data();
+      if (data.createdAt && data.createdAt.toDate) {
+        data.createdAt = data.createdAt.toDate();
+      }
+      return { id: doc.id, ...data };
     });
     return { providers, error: null };
   } catch (error) {
-    console.error("Error fetching providers: ", error); // Add console log
+    console.error('Error fetching providers: ', error);
     return { providers: [], error: error.message };
   }
 };
-
-/**
- * Creates a new booking in Firestore.
- * Corresponds to FR-6 (Book Immediate/Scheduled)
- * and FR-7 (Add Custom Notes)
- */
 const createBooking = async (bookingData) => {
-  // bookingData should include:
-  // { userId, providerId, serviceId, scheduleTime (JS Date), isRecurring, customNotes, status: 'confirmed' }
   try {
-    // Convert JS Dates back to Firestore Timestamps before saving
     const dataToSave = {
-        ...bookingData,
-        scheduleTime: Timestamp.fromDate(bookingData.scheduleTime),
-        createdAt: Timestamp.fromDate(new Date()),
+      ...bookingData,
+      scheduleTime: Timestamp.fromDate(bookingData.scheduleTime),
+      createdAt: Timestamp.fromDate(new Date()),
     };
     const docRef = await addDoc(
       collection(firestoreDB, BOOKINGS_COLLECTION),
@@ -87,86 +84,184 @@ const createBooking = async (bookingData) => {
     );
     return { bookingId: docRef.id, error: null };
   } catch (error) {
-    console.error("Error creating booking: ", error); // Add console log
+    console.error('Error creating booking: ', error);
     return { bookingId: null, error: error.message };
   }
 };
 
-/**
- * Fetches all bookings for a specific user.
- */
+// --- MODIFIED getUserBookings ---
 const getUserBookings = async (userId) => {
   try {
     const bookingsQuery = query(
       collection(firestoreDB, BOOKINGS_COLLECTION),
       where('userId', '==', userId)
-      // Consider adding: orderBy('scheduleTime', 'desc')
     );
     const querySnapshot = await getDocs(bookingsQuery);
-    const bookings = querySnapshot.docs.map((doc) => {
-        const data = doc.data();
-        // Convert Firestore Timestamps back to JS Dates for UI
-        return {
-            id: doc.id,
-            ...data,
-            createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
-            scheduleTime: data.scheduleTime?.toDate ? data.scheduleTime.toDate() : data.scheduleTime,
-        };
+
+    const bookingsData = querySnapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate
+          ? data.createdAt.toDate()
+          : data.createdAt,
+        scheduleTime: data.scheduleTime?.toDate
+          ? data.scheduleTime.toDate()
+          : data.scheduleTime,
+      };
     });
 
-    return { bookings, error: null };
+    // --- ENRICHMENT LOGIC (NEW) ---
+    const enrichedBookings = await Promise.all(
+      bookingsData.map(async (booking) => {
+        let providerName = 'Unknown Provider';
+        let serviceName = 'Unknown Service';
+
+        // Fetch provider name
+        if (booking.providerId) {
+          const { profile } = await profileService.getUserProfile(
+            booking.providerId
+          );
+          if (profile && profile.name) {
+            providerName = profile.name;
+          }
+        }
+
+        // Fetch service name
+        if (booking.serviceId) {
+          const { service } = await getServiceDetails(booking.serviceId);
+          if (service && service.Name) {
+            serviceName = service.Name;
+          }
+        }
+
+        return {
+          ...booking,
+          providerName: providerName,
+          serviceName: serviceName,
+        };
+      })
+    );
+
+    // Sort bookings by date, newest first
+    const sortedBookings = enrichedBookings.sort(
+      (a, b) => b.scheduleTime - a.scheduleTime
+    );
+
+    return { bookings: sortedBookings, error: null };
+    // --- END ENRICHMENT ---
   } catch (error) {
-    console.error("Error fetching user bookings: ", error); // Add console log
+    console.error('Error fetching user bookings: ', error);
+    return { bookings: [], error: error.message };
+  }
+};
+// --- END MODIFICATION ---
+
+const getProviderBookings = async (providerId) => {
+  try {
+    const bookingsQuery = query(
+      collection(firestoreDB, BOOKINGS_COLLECTION),
+      where('providerId', '==', providerId)
+    );
+    const querySnapshot = await getDocs(bookingsQuery);
+
+    const bookingsData = querySnapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate
+          ? data.createdAt.toDate()
+          : data.createdAt,
+        scheduleTime: data.scheduleTime?.toDate
+          ? data.scheduleTime.toDate()
+          : data.scheduleTime,
+      };
+    });
+
+    // Now, enrich the data with client and service names
+    const enrichedBookings = await Promise.all(
+      bookingsData.map(async (booking) => {
+        let clientName = 'Unknown Client';
+        let serviceName = 'Unknown Service';
+
+        // Fetch client name
+        if (booking.userId) {
+          const { profile } = await profileService.getUserProfile(booking.userId);
+          if (profile && profile.name) {
+            clientName = profile.name;
+          }
+        }
+
+        // Fetch service name
+        if (booking.serviceId) {
+          const { service } = await getServiceDetails(booking.serviceId);
+          if (service && service.Name) {
+            serviceName = service.Name;
+          }
+        }
+
+        return {
+          ...booking,
+          clientName: clientName,
+          serviceName: serviceName,
+        };
+      })
+    );
+
+    // Sort bookings by date, newest first
+    const sortedBookings = enrichedBookings.sort(
+      (a, b) => b.scheduleTime - a.scheduleTime
+    );
+
+    return { bookings: sortedBookings, error: null };
+  } catch (error) {
+    console.error('Error fetching provider bookings: ', error);
     return { bookings: [], error: error.message };
   }
 };
 
-/**
- * Listens for real-time location updates for a specific provider.
- * Corresponds to FR-9 (Real-Time GPS Tracking)
- * Uses Realtime Database as specified in CON-1
- */
 const listenToProviderLocation = (providerId, callback) => {
   const providerLocationRef = ref(
     realtimeDB,
     `${PROVIDER_LOCATIONS_REF}/${providerId}`
   );
 
-  // onValue() sets up a persistent listener
-  const unsubscribe = onValue(providerLocationRef, (snapshot) => {
-    if (snapshot.exists()) {
-      callback(snapshot.val()); // e.g., { latitude: 30.123, longitude: 74.456 }
-    } else {
-      callback(null); // Provider location not available
-    }
-  }, (error) => { // Add error handling for listener
-      console.error("Error listening to provider location: ", error);
+  const unsubscribe = onValue(
+    providerLocationRef,
+    (snapshot) => {
+      if (snapshot.exists()) {
+        callback(snapshot.val());
+      } else {
+        callback(null);
+      }
+    },
+    (error) => {
+      console.error('Error listening to provider location: ', error);
       callback(null);
-  });
+    }
+  );
 
-  return unsubscribe; // Return the function to stop listening
+  return unsubscribe;
 };
 
-/**
- * Updates a provider's location in the Realtime Database
- * (This would be called from the provider's app)
- */
 const updateProviderLocation = async (providerId, location) => {
-   try {
+  try {
     const providerLocationRef = ref(
       realtimeDB,
       `${PROVIDER_LOCATIONS_REF}/${providerId}`
     );
     await set(providerLocationRef, {
-        ...location,
-        lastUpdated: new Date().toISOString(),
+      ...location,
+      lastUpdated: new Date().toISOString(),
     });
     return { success: true, error: null };
   } catch (error) {
-    console.error("Error updating provider location: ", error); // Add console log
+    console.error('Error updating provider location: ', error);
     return { success: false, error: error.message };
   }
-}
+};
 
 export const bookingService = {
   getAvailableServices,
@@ -175,5 +270,6 @@ export const bookingService = {
   getUserBookings,
   listenToProviderLocation,
   updateProviderLocation,
+  getProviderBookings,
+  getServiceDetails,
 };
-

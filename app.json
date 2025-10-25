@@ -4,13 +4,13 @@
     "slug": "DomesticCareServices",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "/Users/muhammadhannanhafeez/React native /DomesticCareServices/src/assests/images/DCS-logo.png.png",
+    "icon": "./src/assests/images/icon.jpeg",
     "scheme": "dcsapp",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "/Users/muhammadhannanhafeez/React native /DomesticCareServices/src/assests/images/DCS-logo.png.png",
+      "image": "./src/assests/images/DCS-logo.png.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#F5F5DC"
     },
     "ios": {
       "supportsTablet": true,
@@ -20,7 +20,7 @@
       "package": "com.hannan.domesticcareservices"
     },
     "web": {
-      "favicon": "/Users/muhammadhannanhafeez/React native /DomesticCareServices/src/assests/images/DCS-logo.png.png"
+      "favicon": "./src/assests/images/DCS-logo.png.png"
     }
   }
 }

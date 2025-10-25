@@ -1,5 +1,9 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import {
+  initializeAuth,
+  getReactNativePersistence,
+} from 'firebase/auth';
+import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getDatabase } from 'firebase/database';
@@ -14,10 +18,12 @@ const firebaseConfig = {
   measurementId: "G-XXXXXXXXXX"
 };
 
-// ✅ Prevent Firebase from initializing more than once
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(ReactNativeAsyncStorage),
+});
 
-const auth = getAuth(app);
+
 const firestoreDB = getFirestore(app);
 const realtimeDB = getDatabase(app);
 const storage = getStorage(app);
