@@ -7,24 +7,15 @@ import {
   Alert,
   SafeAreaView,
   ScrollView,
-  Image, // Import the Image component
+  Image,
 } from 'react-native';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import { authService } from '../../api/authService';
 import { COLORS } from '../../constants/colors';
 
-// Assume the logo is placed in an assets folder relative to this file.
-// If 'DCS-logo.png.png' is in 'src/assets/images/', this path should work.
-// Please adjust this path if your logo is saved in a different location.
 const logo = require('../../../src/assests/images/DCS-logo.png.png');
 
-/**
- * Login Screen (FR-1)
- *
- * @param {object} props
- * @param {object} props.navigation - React Navigation prop
- */
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -51,8 +42,6 @@ const LoginScreen = ({ navigation }) => {
       Alert.alert('Login Failed', loginError);
       setError(loginError);
     } else {
-      // The onAuthChange listener in useAuth.js will handle
-      // the navigation to the main app.
       console.log('Logged in user:', user.uid);
     }
   };
@@ -60,9 +49,7 @@ const LoginScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
-        {/* --- Logo Added Here --- */}
         <Image source={logo} style={styles.logo} resizeMode="contain" />
-        {/* ----------------------- */}
 
         <Text style={styles.title}>Welcome Back</Text>
         <Text style={styles.subtitle}>
@@ -103,8 +90,6 @@ const LoginScreen = ({ navigation }) => {
             Don't have an account? <Text style={styles.linkText}>Sign Up</Text>
           </Text>
         </TouchableOpacity>
-
-        {/* TODO: Add Social Logins (Google, Phone) here */}
       </ScrollView>
     </SafeAreaView>
   );
@@ -120,14 +105,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
   },
-  // --- Style for the logo ---
   logo: {
-    width: 150, // You can adjust this width
-    height: 150, // You can adjust this height
+    width: 150,
+    height: 150,
     alignSelf: 'center',
     marginBottom: 24,
   },
-  // --------------------------
   title: {
     fontSize: 28,
     fontWeight: 'bold',
