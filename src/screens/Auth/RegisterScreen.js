@@ -16,7 +16,7 @@ import { authService } from '../../api/authService';
 import { profileService } from '../../api/profileService';
 import { COLORS } from '../../constants/colors';
 
-const logo = require('/Users/muhammadhannanhafeez/React native /Domestic-Care/src/assests/images/DCS-logo.png.png');
+const logo = require('../../../src/assests/images/DCS-logo.png.png');
 
 const RegisterScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');

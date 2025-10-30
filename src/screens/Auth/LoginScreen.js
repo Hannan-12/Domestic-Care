@@ -17,7 +17,7 @@ import { COLORS } from '../../constants/colors';
 // Assume the logo is placed in an assets folder relative to this file.
 // If 'DCS-logo.png.png' is in 'src/assets/images/', this path should work.
 // Please adjust this path if your logo is saved in a different location.
-const logo = require('/Users/muhammadhannanhafeez/React native /Domestic-Care/src/assests/images/DCS-logo.png.png');
+const logo = require('../../../src/assests/images/DCS-logo.png.png');
 
 /**
  * Login Screen (FR-1)
