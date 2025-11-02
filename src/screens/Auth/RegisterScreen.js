@@ -15,10 +15,13 @@ import Button from '../../components/common/Button';
 import { authService } from '../../api/authService';
 import { profileService } from '../../api/profileService';
 import { COLORS } from '../../constants/colors';
+// We no longer need useAuth here since we are not refetching the profile
+// import { useAuth } from '../../hooks/useAuth';
 
 const logo = require('../../../src/assests/images/DCS-logo.png.png');
 
 const RegisterScreen = ({ navigation }) => {
+  // const { refetchProfile } = useAuth(); // No longer needed
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -70,28 +73,37 @@ const RegisterScreen = ({ navigation }) => {
     const { success, error: profileError } =
       await profileService.createUserProfile(user.uid, profileData);
 
-    // Set loading false *after* profile is created
-    setIsLoading(false);
-
     if (profileError) {
+      setIsLoading(false);
       console.error('Error creating profile:', profileError);
       Alert.alert(
         'Registration Error',
         'Your account was created, but we failed to save your profile. Please contact support.'
       );
       setError(profileError);
-    } else {
-      console.log('Registered new user:', user.uid);
-      // --- THIS IS THE FIX ---
-      //
-      // DO NOT show an alert here.
-      // The onAuthChange listener in useAuth.js will
-      // automatically handle the navigation to the main app.
-      //
-      // Showing an alert here pauses the UI and makes the
-      // user think they are still on the register screen,
-      // forcing them to manually click "Log In".
+      return;
     }
+
+    // --- THIS IS THE FIX ---
+    console.log('Registered new user:', user.uid);
+    
+    // 1. Log out the user. This prevents automatic login.
+    await authService.logout();
+    
+    // 2. Stop the loading indicator
+    setIsLoading(false);
+
+    // 3. Alert the user and navigate to Login on press
+    Alert.alert(
+      'Success',
+      'Your account has been created. Please log in.',
+      [
+        {
+          text: 'OK',
+          onPress: () => navigation.navigate('Login'),
+        },
+      ]
+    );
   };
   // --- END MODIFICATION ---
 
@@ -131,6 +143,7 @@ const RegisterScreen = ({ navigation }) => {
   );
 };
 
+// --- STYLES (NO CHANGE) ---
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -139,43 +152,43 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: 16, // reduced from 24
+    padding: 16,
   },
   logo: {
-    width: 130, // reduced size
+    width: 130,
     height: 130,
     alignSelf: 'center',
-    marginBottom: 16, // reduced from 24
+    marginBottom: 16,
   },
   title: {
-    fontSize: 26, // slightly smaller
+    fontSize: 26,
     fontWeight: 'bold',
     color: COLORS.primary || '#006270',
     textAlign: 'center',
-    marginBottom: 6, // reduced from 8
+    marginBottom: 6,
   },
   subtitle: {
     fontSize: 15,
     color: COLORS.greyDark || '#555555',
     textAlign: 'center',
-    marginBottom: 20, // reduced from 32
+    marginBottom: 20,
   },
   switchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginVertical: 10, // reduced from 16
-    paddingHorizontal: 4, // reduced from 8
+    marginVertical: 10,
+    paddingHorizontal: 4,
   },
   switchLabel: {
     fontSize: 15,
     color: COLORS.darkText || '#333333',
   },
   registerButton: {
-    marginTop: 12, // reduced from 16
+    marginTop: 12,
   },
   loginLink: {
-    marginTop: 16, // reduced from 24
+    marginTop: 16,
     textAlign: 'center',
     color: COLORS.greyDark || '#555555',
   },
@@ -186,7 +199,7 @@ const styles = StyleSheet.create({
   generalError: {
     color: COLORS.danger || '#D9534F',
     textAlign: 'center',
-    marginBottom: 8, // reduced from 10
+    marginBottom: 8,
     fontSize: 14,
   },
 });
