@@ -6,8 +6,8 @@ import {
   sendEmailVerification,
   PhoneAuthProvider,
   signInWithCredential,
-  GoogleAuthProvider,
-  signInWithPopup, // Or signInWithRedirect
+  // GoogleAuthProvider, // Commented out
+  // signInWithPopup, // Commented out - Web-only
   onAuthStateChanged,
 } from 'firebase/auth';
 import { auth } from './firebase'; // Import the initialized auth object
@@ -20,7 +20,7 @@ const registerWithEmail = async (email, password) => {
       email,
       password
     );
-    // Send email verification (part of FR-2) [cite: 265]
+    // Send email verification (part of FR-2)
     await sendEmailVerification(userCredential.user);
     return { user: userCredential.user, error: null };
   } catch (error) {
@@ -30,7 +30,7 @@ const registerWithEmail = async (email, password) => {
 
 /**
  * FR-1: Sign in an existing user with email and password
- * [cite: 263]
+ *
  */
 const loginWithEmail = async (email, password) => {
   try {
@@ -47,7 +47,7 @@ const loginWithEmail = async (email, password) => {
 
 /**
  * FR-1 & CON-6: Sign in with a phone number (sends OTP)
- * [cite: 144, 263]
+ *
  * Note: This requires a reCAPTCHA verifier, which needs setup in your UI code.
  * This function returns the confirmationResult object to be used for verifying the code.
  */
@@ -67,7 +67,7 @@ const signInWithPhoneNumber = async (phoneNumber, appVerifier) => {
 
 /**
  * FR-2: Verify the OTP code sent to the user's phone
- * [cite: 265]
+ *
  */
 const confirmPhoneNumberOTP = async (confirmationResult, otpCode) => {
   try {
@@ -80,20 +80,24 @@ const confirmPhoneNumberOTP = async (confirmationResult, otpCode) => {
 
 /**
  * FR-1: Sign in with Google (Social Login)
- * [cite: 263]
+ *
+ * --- COMMENTED OUT ---
+ * This function uses signInWithPopup, which is for web.
+ * React Native requires a native module (e.g., @react-native-google-signin/google-signin)
+ * which will not run in Expo Go without a development build.
  */
-const signInWithGoogle = async () => {
-  try {
-    const provider = new GoogleAuthProvider();
-    // This will open a popup or redirect.
-    // For React Native, you'd typically use @react-native-google-signin/google-signin
-    // This is a simplified web-based example.
-    const result = await signInWithPopup(auth, provider);
-    return { user: result.user, error: null };
-  } catch (error) {
-    return { user: null, error: error.message };
-  }
-};
+// const signInWithGoogle = async () => {
+//   try {
+//     const provider = new GoogleAuthProvider();
+//     // This will open a popup or redirect.
+//     // For React Native, you'd typically use @react-native-google-signin/google-signin
+//     // This is a simplified web-based example.
+//     const result = await signInWithPopup(auth, provider);
+//     return { user: result.user, error: null };
+//   } catch (error) {
+//     return { user: null, error: error.message };
+//   }
+// };
 
 /**
  * Sign out the current user
@@ -119,7 +123,7 @@ export const authService = {
   loginWithEmail,
   signInWithPhoneNumber,
   confirmPhoneNumberOTP,
-  signInWithGoogle,
+  // signInWithGoogle, // Removed from export
   logout,
   onAuthChange,
 };

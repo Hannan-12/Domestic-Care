@@ -1,3 +1,4 @@
+// src/screens/Booking/ServiceProvidersScreen.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -7,18 +8,16 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Alert,
-  Image,
   TouchableOpacity,
-} from 'react-native';
+  Image,
+} from 'react-native'; // <-- 1. ADDED ALL MISSING IMPORTS
 import { bookingService } from '../../api/bookingService';
 import Card from '../../components/common/Card';
 import { COLORS } from '../../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 
-/**
- * Screen to list available providers for a selected service (FR-5)
- */
 const ServiceProvidersScreen = ({ route, navigation }) => {
+  // ... (state and useEffect remain the same)
   const { serviceId, serviceName } = route.params;
   const [providers, setProviders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,12 +42,13 @@ const ServiceProvidersScreen = ({ route, navigation }) => {
     }
     setIsLoading(false);
   };
-
+  
   const handleProviderPress = (provider) => {
     navigation.navigate('ScheduleScreen', { provider, serviceId });
   };
 
   if (isLoading) {
+    // ... (loading view remains the same)
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -56,6 +56,7 @@ const ServiceProvidersScreen = ({ route, navigation }) => {
     );
   }
 
+  // --- 1. MODIFIED RENDER FUNCTION ---
   const renderProviderCard = ({ item }) => (
     <TouchableOpacity onPress={() => handleProviderPress(item)}>
       <Card style={styles.providerCard}>
@@ -70,7 +71,8 @@ const ServiceProvidersScreen = ({ route, navigation }) => {
           </Text>
           <View style={styles.ratingContainer}>
             <Ionicons name="star" size={16} color={COLORS.secondary} />
-            <Text style={styles.ratingText}>{item.rating || 'New'}</Text>
+            {/* --- 2. USE THE NEW 'ratingText' FIELD --- */}
+            <Text style={styles.ratingText}>{item.ratingText || 'New'}</Text>
           </View>
         </View>
         <Ionicons
@@ -81,10 +83,12 @@ const ServiceProvidersScreen = ({ route, navigation }) => {
       </Card>
     </TouchableOpacity>
   );
+  // --- END MODIFICATION ---
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <FlatList
+        // ... (FlatList props remain the same)
         data={providers}
         keyExtractor={(item) => item.id}
         renderItem={renderProviderCard}
@@ -103,6 +107,7 @@ const ServiceProvidersScreen = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  // ... (all styles remain the same)
   safeArea: {
     flex: 1,
     backgroundColor: COLORS.background || '#F5F5DC',
@@ -145,7 +150,7 @@ const styles = StyleSheet.create({
   },
   providerName: {
     fontSize: 18,
-    fontWeight: 'bold', // <-- This is the fix. The extra '.' is removed.
+    fontWeight: 'bold',
     color: COLORS.darkText,
   },
   providerSkill: {
@@ -166,4 +171,3 @@ const styles = StyleSheet.create({
 });
 
 export default ServiceProvidersScreen;
-

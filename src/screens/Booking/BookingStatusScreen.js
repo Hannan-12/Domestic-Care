@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
 import { bookingService } from '../../api/bookingService';
 import Card from '../../components/common/Card';
-import Button from '../../components/common/Button'; // <-- IMPORT Button
+import Button from '../../components/common/Button';
 import { COLORS } from '../../constants/colors';
 import { useIsFocused } from '@react-navigation/native';
 
@@ -47,6 +47,7 @@ const BookingStatusScreen = ({ navigation }) => {
   };
 
   const handleBookingPress = (booking) => {
+    // ... (this function remains the same)
     if (booking.status === 'in-progress' || booking.status === 'confirmed') {
       if (booking.providerId) {
         navigation.navigate('LiveTrackingScreen', {
@@ -59,8 +60,8 @@ const BookingStatusScreen = ({ navigation }) => {
     }
   };
 
-  // --- NEW FUNCTION ---
   const handleCancelBooking = (bookingId) => {
+    // ... (this function remains the same)
     Alert.alert(
       'Cancel Booking',
       'Are you sure you want to cancel this booking?',
@@ -84,25 +85,23 @@ const BookingStatusScreen = ({ navigation }) => {
       ]
     );
   };
+
+  // --- 1. NEW FUNCTION TO HANDLE RATING ---
+  const handleRateBooking = (booking) => {
+    navigation.navigate('RateBookingScreen', { booking: booking });
+  };
   // --- END NEW FUNCTION ---
 
-  if (isLoading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
-  }
-
-  // --- MODIFIED RENDER FUNCTION ---
+  // --- 2. MODIFIED RENDER FUNCTION ---
   const renderBookingCard = ({ item }) => {
     const displayDate =
       item.scheduleTime instanceof Date
         ? item.scheduleTime.toLocaleString()
         : 'Invalid Date';
 
-    // Only show "Cancel" or "Track" buttons if the booking is 'confirmed'
-    const isConfirmed = item.status === 'confirmed';
+    // Check booking status
+    const isConfirmed = item.status === 'confirmed' || item.status === 'in-progress';
+    const isCompleted = item.status === 'completed';
 
     return (
       <Card style={styles.bookingCard}>
@@ -133,7 +132,8 @@ const BookingStatusScreen = ({ navigation }) => {
           </Text>
         </View>
 
-        {/* --- NEW BUTTONS SECTION --- */}
+        {/* --- 3. MODIFIED BUTTONS SECTION --- */}
+        {/* Show "Track" and "Cancel" for active bookings */}
         {isConfirmed && (
           <View style={styles.buttonRow}>
             <Button
@@ -151,12 +151,28 @@ const BookingStatusScreen = ({ navigation }) => {
             />
           </View>
         )}
-        {/* --- END NEW BUTTONS SECTION --- */}
+
+        {/* Show "Rate Provider" for completed bookings */}
+        {isCompleted && (
+          <View style={styles.buttonRow}>
+            <Button
+              title={item.ratingSubmitted ? 'Rated' : 'Rate Provider'}
+              onPress={() => handleRateBooking(item)}
+              disabled={item.ratingSubmitted}
+              style={[
+                styles.cardButton,
+                styles.fullWidthButton, // Make it full width
+                item.ratingSubmitted ? styles.ratedButton : styles.rateButton,
+              ]}
+            />
+          </View>
+        )}
+        {/* --- END MODIFICATION --- */}
       </Card>
     );
   };
-  // --- END MODIFICATION ---
 
+  // --- 4. MODIFIED GETSTATUSCOLOR ---
   const getStatusColor = (status) => {
     switch (status) {
       case 'confirmed':
@@ -164,7 +180,7 @@ const BookingStatusScreen = ({ navigation }) => {
       case 'in-progress':
         return { color: COLORS.info };
       case 'completed':
-        return { color: COLORS.greyDark };
+        return { color: COLORS.greyDark }; // Changed
       case 'cancelled':
         return { color: COLORS.danger };
       default:
@@ -175,6 +191,7 @@ const BookingStatusScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <FlatList
+        // ... (rest of FlatList props are the same)
         data={bookings}
         keyExtractor={(item) => item.id}
         renderItem={renderBookingCard}
@@ -194,8 +211,9 @@ const BookingStatusScreen = ({ navigation }) => {
   );
 };
 
-// --- MODIFIED STYLES ---
+// --- 5. MODIFIED STYLES ---
 const styles = StyleSheet.create({
+  // ... (safeArea, centered, listContainer, title, errorText, etc. are same)
   safeArea: {
     flex: 1,
     backgroundColor: COLORS.background || '#F5F5DC',
@@ -224,7 +242,6 @@ const styles = StyleSheet.create({
   bookingCard: {
     padding: 16,
     marginVertical: 8,
-    // Removed flex settings to allow card to wrap content
   },
   bookingDetails: {
     flex: 1,
@@ -256,7 +273,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: COLORS.greyLight,
     alignSelf: 'flex-start',
-    position: 'absolute', // Position status badge
+    position: 'absolute',
     top: 16,
     right: 16,
   },
@@ -264,7 +281,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
-  // --- NEW STYLES FOR BUTTONS ---
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -274,9 +290,9 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   cardButton: {
-    flex: 1, // Make buttons take equal space
+    flex: 1, 
     marginHorizontal: 4,
-    paddingVertical: 10, // Make buttons smaller
+    paddingVertical: 10,
   },
   cardButtonText: {
     fontSize: 14,
@@ -287,6 +303,19 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: COLORS.danger,
     fontSize: 14,
+  },
+  // --- 6. NEW STYLES FOR RATING BUTTONS ---
+  fullWidthButton: {
+    flex: 1,
+    marginHorizontal: 0,
+  },
+  rateButton: {
+    backgroundColor: COLORS.secondary, // Use accent color
+    borderColor: COLORS.secondary,
+  },
+  ratedButton: {
+    backgroundColor: COLORS.greyLight,
+    borderColor: COLORS.grey,
   },
   // --- END NEW STYLES ---
 });

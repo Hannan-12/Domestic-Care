@@ -14,6 +14,7 @@ import { useAuth } from '../../hooks/useAuth';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import { COLORS } from '../../constants/colors';
+// import { mapService } from '../../api/mapService'; // mapService is not provided, commenting out
 
 /**
  * Screen for real-time GPS tracking of a provider (FR-9, FR-11, FR-12)
@@ -60,21 +61,24 @@ const LiveTrackingScreen = ({ route }) => {
     return () => unsubscribe();
   }, [providerId]);
 
+  // --- COMMENTED OUT ---
   // Effect to update ETA (FR-11) whenever the provider's location changes
-  useEffect(() => {
-    if (providerLocation && userLocation) {
-      // Fetch new ETA
-      (async () => {
-        const { duration } = await mapService.getEtaAndDistance(
-          providerLocation,
-          userLocation
-        );
-        if (duration) {
-          setEta(duration);
-        }
-      })();
-    }
-  }, [providerLocation, userLocation]);
+  // This relies on a 'mapService' which is not provided and
+  // relates to map functionality not available in Expo Go.
+  // useEffect(() => {
+  //   if (providerLocation && userLocation) {
+  //     // Fetch new ETA
+  //     (async () => {
+  //       const { duration } = await mapService.getEtaAndDistance(
+  //         providerLocation,
+  //         userLocation
+  //       );
+  //       if (duration) {
+  //         setEta(duration);
+  //       }
+  //     })();
+  //   }
+  // }, [providerLocation, userLocation]);
 
   const handleEmergencyAlert = () => {
     // This implements FR-12

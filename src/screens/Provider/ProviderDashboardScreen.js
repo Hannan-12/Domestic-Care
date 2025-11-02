@@ -13,7 +13,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { bookingService } from '../../api/bookingService';
 import { COLORS } from '../../constants/colors';
 import Card from '../../components/common/Card';
-import Button from '../../components/common/Button'; // <-- IMPORT Button
+import Button from '../../components/common/Button';
 import { useIsFocused } from '@react-navigation/native';
 
 const ProviderDashboardScreen = ({ navigation }) => {
@@ -44,7 +44,6 @@ const ProviderDashboardScreen = ({ navigation }) => {
     setIsLoading(false);
   };
 
-  // --- NEW FUNCTION ---
   const handleCancelBooking = (bookingId) => {
     Alert.alert(
       'Cancel Booking',
@@ -69,6 +68,32 @@ const ProviderDashboardScreen = ({ navigation }) => {
       ]
     );
   };
+
+  // --- NEW FUNCTION TO MARK AS COMPLETED ---
+  const handleCompleteBooking = (bookingId) => {
+    Alert.alert(
+      'Complete Booking',
+      'Are you sure you want to mark this job as completed?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes, Complete',
+          style: 'default',
+          onPress: async () => {
+            const { success, error } =
+              await bookingService.updateBookingStatus(bookingId, 'completed');
+
+            if (error) {
+              Alert.alert('Error', 'Failed to update booking.');
+            } else {
+              Alert.alert('Success', 'Booking marked as completed.');
+              fetchProviderBookings(); // Refresh the list
+            }
+          },
+        },
+      ]
+    );
+  };
   // --- END NEW FUNCTION ---
 
   if (isLoading) {
@@ -79,9 +104,7 @@ const ProviderDashboardScreen = ({ navigation }) => {
     );
   }
 
-  // --- MODIFIED RENDER FUNCTION ---
   const renderBookingCard = ({ item }) => {
-    // Only show "Cancel" button if the booking is 'confirmed'
     const isConfirmed = item.status === 'confirmed';
 
     return (
@@ -102,24 +125,30 @@ const ProviderDashboardScreen = ({ navigation }) => {
           </Text>
         </View>
 
-        {/* --- NEW BUTTONS SECTION --- */}
+        {/* --- MODIFIED BUTTONS SECTION --- */}
         {isConfirmed && (
           <View style={styles.buttonRow}>
-            {/* You could add a "Start Job" button here later */}
             <Button
-              title="Cancel Booking"
+              title="Cancel"
               onPress={() => handleCancelBooking(item.id)}
               style={[styles.cardButton, styles.cancelButton]}
               textStyle={styles.cancelButtonText}
               type="secondary"
             />
+            {/* --- ADDED NEW BUTTON --- */}
+            <Button
+              title="Mark as Completed"
+              onPress={() => handleCompleteBooking(item.id)}
+              style={[styles.cardButton, styles.completeButton]}
+              textStyle={styles.completeButtonText}
+              type="primary"
+            />
           </View>
         )}
-        {/* --- END NEW BUTTONS SECTION --- */}
+        {/* --- END MODIFIED SECTION --- */}
       </Card>
     );
   };
-  // --- END MODIFICATION ---
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -145,7 +174,6 @@ const ProviderDashboardScreen = ({ navigation }) => {
   );
 };
 
-// --- MODIFIED STYLES ---
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -200,18 +228,18 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.primary,
   },
-  // --- NEW STYLES FOR BUTTONS ---
+  // --- MODIFIED STYLES FOR BUTTONS ---
   buttonRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end', // Aligns button to the right
+    justifyContent: 'space-between', // Use space-between
     marginTop: 16,
     borderTopWidth: 1,
     borderTopColor: COLORS.greyLight,
     paddingTop: 16,
   },
   cardButton: {
-    flex: 0.5, // Make button take half the space
-    marginHorizontal: 4,
+    flex: 0.48, // Make buttons take slightly less than half
+    marginHorizontal: 0, // Remove horizontal margin
     paddingVertical: 10,
   },
   cancelButton: {
@@ -219,6 +247,15 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     color: COLORS.danger,
+    fontSize: 14,
+  },
+  // --- NEW STYLES FOR COMPLETE BUTTON ---
+  completeButton: {
+    backgroundColor: COLORS.success, // Use success color
+    borderColor: COLORS.success,
+  },
+  completeButtonText: {
+    color: COLORS.white,
     fontSize: 14,
   },
   // --- END NEW STYLES ---

@@ -17,6 +17,7 @@ const SERVICES_COLLECTION = 'Services';
 const BOOKINGS_COLLECTION = 'bookings';
 const PROVIDER_LOCATIONS_REF = 'providerLocations';
 
+// --- ORIGINAL FUNCTION (RESTORED) ---
 const getServiceDetails = async (serviceId) => {
   try {
     const serviceDocRef = doc(firestoreDB, SERVICES_COLLECTION, serviceId);
@@ -33,6 +34,7 @@ const getServiceDetails = async (serviceId) => {
   }
 };
 
+// --- ORIGINAL FUNCTION (RESTORED) ---
 const getAvailableServices = async () => {
   try {
     const servicesQuery = query(collection(firestoreDB, SERVICES_COLLECTION));
@@ -47,6 +49,8 @@ const getAvailableServices = async () => {
     return { services: [], error: error.message };
   }
 };
+
+// --- UPDATED FOR REVIEW SYSTEM ---
 const getProvidersForService = async (serviceId) => {
   try {
     const providersQuery = query(
@@ -56,19 +60,49 @@ const getProvidersForService = async (serviceId) => {
     );
 
     const querySnapshot = await getDocs(providersQuery);
-    const providers = querySnapshot.docs.map((doc) => {
+
+    const providersData = querySnapshot.docs.map((doc) => {
       const data = doc.data();
       if (data.createdAt && data.createdAt.toDate) {
         data.createdAt = data.createdAt.toDate();
       }
       return { id: doc.id, ...data };
     });
-    return { providers, error: null };
+
+    // Now, enrich providers with their average rating
+    const providersWithRating = await Promise.all(
+      providersData.map(async (provider) => {
+        const { reviews, error } = await profileService.getProviderReviews(
+          provider.id
+        );
+        let averageRating = 0;
+        let ratingText = 'New';
+
+        if (!error && reviews.length > 0) {
+          const totalRating = reviews.reduce(
+            (acc, curr) => acc + (curr.rating || 0),
+            0
+          );
+          averageRating = totalRating / reviews.length;
+          ratingText = `${averageRating.toFixed(1)} (${reviews.length} reviews)`;
+        }
+
+        return {
+          ...provider,
+          averageRating: averageRating,
+          ratingText: ratingText,
+        };
+      })
+    );
+
+    return { providers: providersWithRating, error: null };
   } catch (error) {
     console.error('Error fetching providers: ', error);
     return { providers: [], error: error.message };
   }
 };
+
+// --- ORIGINAL FUNCTION (RESTORED) ---
 const createBooking = async (bookingData) => {
   try {
     const dataToSave = {
@@ -87,12 +121,16 @@ const createBooking = async (bookingData) => {
   }
 };
 
+// --- UPDATED FOR REVIEW SYSTEM ---
 const getUserBookings = async (userId) => {
   try {
     const bookingsQuery = query(
       collection(firestoreDB, BOOKINGS_COLLECTION),
-      where('userId', '==', userId)
+      where('userId', '==', userId),
+      // Show active bookings AND completed bookings (for rating)
+      where('status', 'in', ['confirmed', 'in-progress', 'completed'])
     );
+
     const querySnapshot = await getDocs(bookingsQuery);
 
     const bookingsData = querySnapshot.docs.map((doc) => {
@@ -149,11 +187,14 @@ const getUserBookings = async (userId) => {
   }
 };
 
+// --- UPDATED FOR HIDING OLD BOOKINGS ---
 const getProviderBookings = async (providerId) => {
   try {
     const bookingsQuery = query(
       collection(firestoreDB, BOOKINGS_COLLECTION),
-      where('providerId', '==', providerId)
+      where('providerId', '==', providerId),
+      // Providers only see active jobs
+      where('status', 'in', ['confirmed', 'in-progress'])
     );
     const querySnapshot = await getDocs(bookingsQuery);
 
@@ -209,6 +250,7 @@ const getProviderBookings = async (providerId) => {
   }
 };
 
+// --- ORIGINAL FUNCTION (RESTORED) ---
 const listenToProviderLocation = (providerId, callback) => {
   const providerLocationRef = ref(
     realtimeDB,
@@ -233,6 +275,7 @@ const listenToProviderLocation = (providerId, callback) => {
   return unsubscribe;
 };
 
+// --- ORIGINAL FUNCTION (RESTORED) ---
 const updateProviderLocation = async (providerId, location) => {
   try {
     const providerLocationRef = ref(
@@ -250,6 +293,7 @@ const updateProviderLocation = async (providerId, location) => {
   }
 };
 
+// --- ORIGINAL FUNCTION (RESTORED) ---
 const updateBookingStatus = async (bookingId, newStatus) => {
   try {
     const bookingDocRef = doc(firestoreDB, BOOKINGS_COLLECTION, bookingId);
@@ -263,6 +307,7 @@ const updateBookingStatus = async (bookingId, newStatus) => {
   }
 };
 
+// --- EXPORT ALL FUNCTIONS ---
 export const bookingService = {
   getAvailableServices,
   getProvidersForService,

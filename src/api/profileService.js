@@ -3,7 +3,7 @@ import {
   doc,
   setDoc,
   getDoc,
-  updateDoc,
+  updateDoc, // <-- Make sure this is imported
   deleteDoc,
   collection,
   addDoc,
@@ -14,10 +14,12 @@ import {
 } from 'firebase/firestore';
 import { firestoreDB } from './firebase';
 
-// CORRECTED: Match the collection name in your Firestore screenshot
-const PROFILES_COLLECTION = 'users'; 
+// Collection names
+const PROFILES_COLLECTION = 'users';
 const REVIEWS_COLLECTION = 'reviews';
+const BOOKINGS_COLLECTION = 'bookings'; // <-- Added for rating
 
+// --- ORIGINAL FUNCTIONS (RESTORED) ---
 
 const createUserProfile = async (userId, profileData) => {
   // profileData should include { email, name, role: 'client' or 'provider' }
@@ -35,9 +37,6 @@ const createUserProfile = async (userId, profileData) => {
   }
 };
 
-/**
- * Fetches a user's profile data.
- */
 const getUserProfile = async (userId) => {
   try {
     const userDocRef = doc(firestoreDB, PROFILES_COLLECTION, userId);
@@ -51,7 +50,6 @@ const getUserProfile = async (userId) => {
       }
       return { profile: { id: docSnap.id, ...profileData }, error: null };
     } else {
-      // It's not an error if the profile doesn't exist, just return null
       console.warn(`No profile document found for userId: ${userId}`);
       return { profile: null, error: 'No such profile!' };
     }
@@ -61,10 +59,6 @@ const getUserProfile = async (userId) => {
   }
 };
 
-/**
- * Updates a user's profile information.
- * Corresponds to FR-4 (Update/Delete Profile).
- */
 const updateUserProfile = async (userId, updatedData) => {
   try {
     const userDocRef = doc(firestoreDB, PROFILES_COLLECTION, userId);
@@ -76,10 +70,6 @@ const updateUserProfile = async (userId, updatedData) => {
   }
 };
 
-/**
- * Adds provider-specific details like skills and availability.
- * Corresponds to FR-3 (Add Provider Skills & Availability).
- */
 const updateProviderDetails = async (providerId, details) => {
   // details should be { skills: ['housekeeping', 'pet_care'], availability: {...} }
   try {
@@ -95,11 +85,6 @@ const updateProviderDetails = async (providerId, details) => {
   }
 };
 
-/**
- * Deletes a user's profile document.
- * Note: This does NOT delete the Firebase Auth user.
- * Corresponds to FR-4 (Update/Delete Profile).
- */
 const deleteUserProfileDocument = async (userId) => {
   try {
     const userDocRef = doc(firestoreDB, PROFILES_COLLECTION, userId);
@@ -111,18 +96,24 @@ const deleteUserProfileDocument = async (userId) => {
   }
 };
 
-/**
- * Submits a rating and review for a provider.
- * Corresponds to FR-13 (Rate & Review Provider).
- */
+// --- UPDATED FUNCTIONS (FOR REVIEW SYSTEM) ---
+
 const submitProviderReview = async (reviewData) => {
   // reviewData: { providerId, clientId, bookingId, rating: 5, comment: 'Great job!' }
   try {
+    // Step 1: Add the new review to the 'reviews' collection
     const docRef = await addDoc(collection(firestoreDB, REVIEWS_COLLECTION), {
       ...reviewData,
       type: 'provider_review',
       createdAt: Timestamp.fromDate(new Date()),
     });
+
+    // Step 2: Update the original booking to show it has been rated
+    const bookingDocRef = doc(firestoreDB, BOOKINGS_COLLECTION, reviewData.bookingId);
+    await updateDoc(bookingDocRef, {
+      ratingSubmitted: true,
+    });
+    
     // TODO: You might also update the provider's average rating here (e.g., using a transaction or cloud function)
     return { reviewId: docRef.id, error: null };
   } catch (error) {
@@ -131,21 +122,16 @@ const submitProviderReview = async (reviewData) => {
   }
 };
 
-/**
- * Fetches all reviews for a specific provider.
- */
 const getProviderReviews = async (providerId) => {
   try {
     const reviewsQuery = query(
       collection(firestoreDB, REVIEWS_COLLECTION),
       where('providerId', '==', providerId),
       where('type', '==', 'provider_review')
-      // Consider adding orderBy('createdAt', 'desc') if needed
     );
     const querySnapshot = await getDocs(reviewsQuery);
     const reviews = querySnapshot.docs.map((doc) => {
          const data = doc.data();
-         // Convert Timestamp
          if (data.createdAt && data.createdAt.toDate) {
              data.createdAt = data.createdAt.toDate();
          }
@@ -158,6 +144,7 @@ const getProviderReviews = async (providerId) => {
   }
 };
 
+// --- EXPORT ALL FUNCTIONS ---
 export const profileService = {
   createUserProfile,
   getUserProfile,
@@ -167,4 +154,3 @@ export const profileService = {
   submitProviderReview,
   getProviderReviews,
 };
-
