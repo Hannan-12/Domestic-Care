@@ -27,6 +27,7 @@ const RegisterScreen = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // --- MODIFIED FUNCTION ---
   const handleRegister = async () => {
     if (!name || !email || !password || !confirmPassword) {
       setError('Please fill in all fields.');
@@ -69,6 +70,9 @@ const RegisterScreen = ({ navigation }) => {
     const { success, error: profileError } =
       await profileService.createUserProfile(user.uid, profileData);
 
+    // Set loading false *after* profile is created
+    setIsLoading(false);
+
     if (profileError) {
       console.error('Error creating profile:', profileError);
       Alert.alert(
@@ -78,12 +82,18 @@ const RegisterScreen = ({ navigation }) => {
       setError(profileError);
     } else {
       console.log('Registered new user:', user.uid);
-      Alert.alert(
-        'Success',
-        'Your account has been created. Please check your email to verify your account.'
-      );
+      // --- THIS IS THE FIX ---
+      //
+      // DO NOT show an alert here.
+      // The onAuthChange listener in useAuth.js will
+      // automatically handle the navigation to the main app.
+      //
+      // Showing an alert here pauses the UI and makes the
+      // user think they are still on the register screen,
+      // forcing them to manually click "Log In".
     }
   };
+  // --- END MODIFICATION ---
 
   return (
     <SafeAreaView style={styles.safeArea}>
