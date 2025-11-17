@@ -7,7 +7,7 @@ import {
   SafeAreaView,
   ScrollView,
   Alert,
-  Switch,
+  TouchableOpacity, // Added TouchableOpacity for recurrence buttons
 } from 'react-native';
 import { bookingService } from '../../api/bookingService';
 import { useAuth } from '../../hooks/useAuth';
@@ -30,8 +30,12 @@ const ScheduleScreen = ({ route, navigation }) => {
   const [bookingDate, setBookingDate] = useState(new Date());
   const [bookingTime, setBookingTime] = useState(new Date());
   const [customNotes, setCustomNotes] = useState('');
-  const [isRecurring, setIsRecurring] = useState(false);
+  // MODIFIED: Replaced boolean with string for recurrence type
+  const [recurrenceType, setRecurrenceType] = useState('none');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Array containing all four recurrence options
+  const recurrenceOptions = ['none', 'daily', 'weekly', 'monthly'];
 
   const handleConfirmBooking = async () => {
     if (!user) {
@@ -56,8 +60,8 @@ const ScheduleScreen = ({ route, navigation }) => {
       serviceId: serviceId,
       scheduleTime: scheduledTime,
       status: 'confirmed', // Or 'pending'
-      customNotes: customNotes, // FR-7
-      isRecurring: isRecurring, // FR-8
+      // MODIFIED: Use recurrenceType string (FR-8 update)
+      recurrenceType: recurrenceType, 
     };
 
     const { bookingId, error } = await bookingService.createBooking(bookingData);
@@ -69,7 +73,7 @@ const ScheduleScreen = ({ route, navigation }) => {
     } else {
       Alert.alert(
         'Booking Confirmed!',
-        `Your booking (ID: ${bookingId}) with ${provider.name} has been confirmed.`
+        `Your booking (ID: ${bookingId}) with ${provider.name} has been confirmed. Recurrence: ${recurrenceType}.`
       );
       // Navigate to the 'Bookings' tab to see the new booking
       navigation.navigate('Bookings');
@@ -105,15 +109,32 @@ const ScheduleScreen = ({ route, navigation }) => {
           style={{ height: 100 }}
         />
 
-        <View style={styles.switchContainer}>
-          <Text style={styles.switchLabel}>Recurring Booking? (FR-8)</Text>
-          <Switch
-            trackColor={{ false: COLORS.grey, true: COLORS.primaryLight }}
-            thumbColor={isRecurring ? COLORS.primary : COLORS.greyLight}
-            onValueChange={setIsRecurring}
-            value={isRecurring}
-          />
+        {/* MODIFIED: Recurrence Selector rendering all options */}
+        <Text style={styles.switchLabel}>Recurrence (FR-8)</Text>
+        <View style={styles.recurrenceContainer}>
+          {/* This maps over the array ['none', 'daily', 'weekly', 'monthly'] to create 4 buttons */}
+          {recurrenceOptions.map((type) => (
+            <TouchableOpacity
+              key={type}
+              style={[
+                styles.recurrenceOption,
+                // Highlighted style is applied only when the current 'type' matches the selected state
+                recurrenceType === type && styles.recurrenceSelected,
+              ]}
+              onPress={() => setRecurrenceType(type)}
+            >
+              <Text
+                style={[
+                  styles.recurrenceText,
+                  recurrenceType === type && styles.recurrenceTextSelected,
+                ]}
+              >
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
+        {/* END MODIFIED */}
 
         <Button
           title="Confirm Booking"
@@ -146,19 +167,39 @@ const styles = StyleSheet.create({
     color: COLORS.greyDark || '#555555',
     marginBottom: 24,
   },
-  switchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginVertical: 16,
-    padding: 8,
-    backgroundColor: COLORS.white,
-    borderRadius: 8,
-  },
-  switchLabel: {
+  switchLabel: { // Used as a header for recurrence options
     fontSize: 16,
     color: COLORS.darkText,
     fontWeight: '600',
+    marginTop: 16, 
+    marginBottom: 8,
+  },
+  // NEW STYLES for recurrence selector
+  recurrenceContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: COLORS.white,
+    borderRadius: 8,
+    padding: 4,
+    marginBottom: 16,
+  },
+  recurrenceOption: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 6,
+    marginHorizontal: 2,
+  },
+  recurrenceSelected: {
+    backgroundColor: COLORS.primary,
+  },
+  recurrenceText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.darkText,
+  },
+  recurrenceTextSelected: {
+    color: COLORS.white,
   },
   confirmButton: {
     marginTop: 32,

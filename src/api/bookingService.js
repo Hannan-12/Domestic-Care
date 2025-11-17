@@ -17,6 +17,34 @@ const SERVICES_COLLECTION = 'Services';
 const BOOKINGS_COLLECTION = 'bookings';
 const PROVIDER_LOCATIONS_REF = 'providerLocations';
 
+// --- NEW HELPER FUNCTION FOR RECURRENCE (FR-8 Update) ---
+/**
+ * Calculates the scheduleTime for the next recurrence based on the type.
+ * @param {Date} originalDate The base date/time of the completed booking.
+ * @param {'daily' | 'weekly' | 'monthly'} recurrenceType The type of recurrence.
+ * @returns {Date | null} The date object for the next booking, or null.
+ */
+const calculateNextRecurrenceDate = (originalDate, recurrenceType) => {
+  const nextDate = new Date(originalDate.getTime()); // Start with a copy of the original date/time
+
+  switch (recurrenceType) {
+    case 'daily':
+      nextDate.setDate(nextDate.getDate() + 1);
+      break;
+    case 'weekly':
+      nextDate.setDate(nextDate.getDate() + 7);
+      break;
+    case 'monthly':
+      // Handles month overflow correctly (e.g., Jan 31st -> Feb 28/29)
+      nextDate.setMonth(nextDate.getMonth() + 1); 
+      break;
+    default:
+      return null;
+  }
+  return nextDate;
+};
+// --- END NEW HELPER FUNCTION ---
+
 // --- ORIGINAL FUNCTION (RESTORED) ---
 const getServiceDetails = async (serviceId) => {
   try {
@@ -43,7 +71,7 @@ const getAvailableServices = async () => {
       id: doc.id,
       ...doc.data(),
     }));
-    return { services, error: null };
+    return { services: services, error: null };
   } catch (error) {
     console.error('Error fetching services: ', error);
     return { services: [], error: error.message };
@@ -102,14 +130,30 @@ const getProvidersForService = async (serviceId) => {
   }
 };
 
-// --- ORIGINAL FUNCTION (RESTORED) ---
+// --- MODIFIED FUNCTION (FIXES FirebaseError: Unsupported field value: undefined) ---
 const createBooking = async (bookingData) => {
   try {
+    // FIX: Sanitize bookingData to remove any 'undefined' fields before saving to Firestore.
+    // This is the definitive fix for the "Unsupported field value: undefined" error.
+    const sanitizedBookingData = Object.keys(bookingData).reduce((acc, key) => {
+      // If the value is NOT undefined, include it.
+      if (bookingData[key] !== undefined) {
+        acc[key] = bookingData[key];
+      }
+      return acc;
+    }, {});
+    
+    // Ensure scheduleTime is present before Timestamp conversion
+    if (!sanitizedBookingData.scheduleTime) {
+      throw new Error("Missing scheduleTime in booking data.");
+    }
+
     const dataToSave = {
-      ...bookingData,
-      scheduleTime: Timestamp.fromDate(bookingData.scheduleTime),
+      ...sanitizedBookingData,
+      scheduleTime: Timestamp.fromDate(sanitizedBookingData.scheduleTime),
       createdAt: Timestamp.fromDate(new Date()),
     };
+    
     const docRef = await addDoc(
       collection(firestoreDB, BOOKINGS_COLLECTION),
       dataToSave
@@ -120,8 +164,9 @@ const createBooking = async (bookingData) => {
     return { bookingId: null, error: error.message };
   }
 };
+// --- END MODIFIED FUNCTION ---
 
-// --- UPDATED FOR REVIEW SYSTEM ---
+// --- UPDATED FOR SMART SORTING (to show upcoming bookings first) ---
 const getUserBookings = async (userId) => {
   try {
     const bookingsQuery = query(
@@ -176,9 +221,33 @@ const getUserBookings = async (userId) => {
       })
     );
 
-    const sortedBookings = enrichedBookings.sort(
-      (a, b) => b.scheduleTime - a.scheduleTime
-    );
+    // MODIFIED: Custom sorting logic to prioritize upcoming bookings
+    const sortedBookings = enrichedBookings.sort((a, b) => {
+        // Define an order for statuses (Active first, then non-active)
+        const statusOrder = {
+            'confirmed': 1,
+            'in-progress': 2,
+            'completed': 3,
+            'cancelled': 4,
+        };
+
+        const orderA = statusOrder[a.status] || 99;
+        const orderB = statusOrder[b.status] || 99;
+
+        // 1. Sort by Status Group (Active first)
+        if (orderA !== orderB) {
+            return orderA - orderB;
+        }
+
+        // 2. Within Active statuses ('confirmed', 'in-progress'), sort by date ASC (next one first)
+        if (orderA <= 2) {
+            return a.scheduleTime.getTime() - b.scheduleTime.getTime(); // ASC (earliest first)
+        }
+
+        // 3. For all other statuses ('completed', 'cancelled'), sort by date DESC (most recent first)
+        return b.scheduleTime.getTime() - a.scheduleTime.getTime(); // DESC (latest first)
+    });
+    // END MODIFIED SORTING
 
     return { bookings: sortedBookings, error: null };
   } catch (error) {
@@ -293,19 +362,61 @@ const updateProviderLocation = async (providerId, location) => {
   }
 };
 
-// --- ORIGINAL FUNCTION (RESTORED) ---
+// --- MODIFIED FUNCTION TO HANDLE RECURRENCE ---
 const updateBookingStatus = async (bookingId, newStatus) => {
   try {
     const bookingDocRef = doc(firestoreDB, BOOKINGS_COLLECTION, bookingId);
+    
+    // 1. Fetch current booking details to check recurrence
+    const bookingSnap = await getDoc(bookingDocRef);
+    if (!bookingSnap.exists()) {
+        return { success: false, error: 'Booking not found' };
+    }
+    const booking = bookingSnap.data();
+
+    // Update status for the current booking
     await updateDoc(bookingDocRef, {
       status: newStatus,
     });
+    
+    // 2. Check for recurrence after completion
+    if (newStatus === 'completed' && booking.recurrenceType && booking.recurrenceType !== 'none') {
+        
+        const originalScheduleTime = booking.scheduleTime.toDate();
+        const nextScheduleTime = calculateNextRecurrenceDate(originalScheduleTime, booking.recurrenceType);
+
+        if (nextScheduleTime) {
+            // Create a new booking object, preserving most data
+            const newBookingData = {
+                userId: booking.userId,
+                providerId: booking.providerId,
+                serviceId: booking.serviceId,
+                scheduleTime: nextScheduleTime, // The shifted date
+                status: 'confirmed', // The new booking is confirmed immediately
+                // customNotes is handled by the new createBooking filter, so we pass it as is.
+                customNotes: booking.customNotes, 
+                recurrenceType: booking.recurrenceType, // Keep the recurrence type
+            };
+            
+            // Create the new recurring booking
+            const { bookingId: newBookingId, error: createError } = await createBooking(newBookingData);
+            
+            if (createError) {
+                console.error('Failed to create recurring booking:', createError);
+                return { success: false, error: 'Completed but failed to create next recurring booking.' };
+            }
+
+            console.log(`Recurrence handled: New ${booking.recurrenceType} booking created (ID: ${newBookingId}) for ${nextScheduleTime.toLocaleDateString()}`);
+        }
+    }
+
     return { success: true, error: null };
   } catch (error) {
-    console.error('Error updating booking status: ', error);
+    console.error('Error updating booking status or handling recurrence: ', error);
     return { success: false, error: error.message };
   }
 };
+// --- END MODIFIED FUNCTION ---
 
 // --- EXPORT ALL FUNCTIONS ---
 export const bookingService = {

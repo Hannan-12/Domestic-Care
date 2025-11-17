@@ -83,14 +83,9 @@ const RegisterScreen = ({ navigation }) => {
       setError(profileError);
       return;
     }
-
-    // --- THIS IS THE FIX ---
     console.log('Registered new user:', user.uid);
-    
-    // 1. Log out the user. This prevents automatic login.
     await authService.logout();
     
-    // 2. Stop the loading indicator
     setIsLoading(false);
 
     // 3. Alert the user and navigate to Login on press

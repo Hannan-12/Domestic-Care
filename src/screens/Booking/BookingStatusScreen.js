@@ -1,4 +1,3 @@
-// src/screens/Tracking/BookingStatusScreen.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -26,9 +25,12 @@ const BookingStatusScreen = ({ navigation }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (user && isFocused) {
-      fetchUserBookings();
-    }
+    const fetchOnFocus = async () => {
+      if (user && isFocused) {
+        fetchUserBookings();
+      }
+    };
+    fetchOnFocus();
   }, [user, isFocused]);
 
   const fetchUserBookings = async () => {
@@ -304,7 +306,6 @@ const styles = StyleSheet.create({
     color: COLORS.danger,
     fontSize: 14,
   },
-  // --- 6. NEW STYLES FOR RATING BUTTONS ---
   fullWidthButton: {
     flex: 1,
     marginHorizontal: 0,
@@ -317,7 +318,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.greyLight,
     borderColor: COLORS.grey,
   },
-  // --- END NEW STYLES ---
 });
 
 export default BookingStatusScreen;
