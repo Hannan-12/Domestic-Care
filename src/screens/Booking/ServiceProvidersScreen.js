@@ -1,4 +1,3 @@
-// src/screens/Booking/ServiceProvidersScreen.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -10,32 +9,28 @@ import {
   Alert,
   TouchableOpacity,
   Image,
-} from 'react-native'; // <-- 1. ADDED ALL MISSING IMPORTS
+} from 'react-native';
 import { bookingService } from '../../api/bookingService';
 import Card from '../../components/common/Card';
+import Button from '../../components/common/Button'; // Ensure this is imported
 import { COLORS } from '../../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 
 const ServiceProvidersScreen = ({ route, navigation }) => {
-  // ... (state and useEffect remain the same)
   const { serviceId, serviceName } = route.params;
   const [providers, setProviders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
     navigation.setOptions({ title: serviceName });
     fetchProviders(serviceId);
-  }, [serviceId, serviceName, navigation]);
+  }, [serviceId]);
 
   const fetchProviders = async (id) => {
     setIsLoading(true);
-    setError(null);
-    const { providers: fetchedProviders, error: fetchError } =
-      await bookingService.getProvidersForService(id);
+    const { providers: fetchedProviders, error } = await bookingService.getProvidersForService(id);
     
-    if (fetchError) {
-      setError(fetchError);
+    if (error) {
       Alert.alert('Error', 'Could not fetch available providers.');
     } else {
       setProviders(fetchedProviders);
@@ -43,12 +38,17 @@ const ServiceProvidersScreen = ({ route, navigation }) => {
     setIsLoading(false);
   };
   
-  const handleProviderPress = (provider) => {
-    navigation.navigate('ScheduleScreen', { provider, serviceId });
+  // Requirement 2: Main option is to "Make a Request"
+  const handleMakeRequest = () => {
+    navigation.navigate('CreateRequestScreen', { serviceId, serviceName });
+  };
+
+  // Requirement 7: View Reviews
+  const handleViewReviews = (provider) => {
+    navigation.navigate('ProviderReviewsScreen', { provider });
   };
 
   if (isLoading) {
-    // ... (loading view remains the same)
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -56,50 +56,46 @@ const ServiceProvidersScreen = ({ route, navigation }) => {
     );
   }
 
-  // --- 1. MODIFIED RENDER FUNCTION ---
   const renderProviderCard = ({ item }) => (
-    <TouchableOpacity onPress={() => handleProviderPress(item)}>
-      <Card style={styles.providerCard}>
-        <Image
-          style={styles.avatar}
-          source={{ uri: item.avatarUrl || 'https://via.placeholder.com/60' }}
-        />
-        <View style={styles.providerInfo}>
-          <Text style={styles.providerName}>{item.name}</Text>
-          <Text style={styles.providerSkill}>
-            {item.experience || 'No experience listed'}
-          </Text>
-          <View style={styles.ratingContainer}>
-            <Ionicons name="star" size={16} color={COLORS.secondary} />
-            {/* --- 2. USE THE NEW 'ratingText' FIELD --- */}
-            <Text style={styles.ratingText}>{item.ratingText || 'New'}</Text>
-          </View>
-        </View>
-        <Ionicons
-          name="chevron-forward"
-          size={24}
-          color={COLORS.grey}
-        />
-      </Card>
-    </TouchableOpacity>
+    <Card style={styles.providerCard}>
+      <Image
+        style={styles.avatar}
+        source={{ uri: item.avatarUrl || 'https://via.placeholder.com/60' }}
+      />
+      <View style={styles.providerInfo}>
+        <Text style={styles.providerName}>{item.name}</Text>
+        <Text style={styles.providerSkill}>{item.experience || 'Experience not listed'}</Text>
+        
+        {/* Requirement 7: Clickable Rating */}
+        <TouchableOpacity onPress={() => handleViewReviews(item)} style={styles.ratingContainer}>
+          <Ionicons name="star" size={16} color={COLORS.secondary} />
+          <Text style={styles.ratingText}>{item.ratingText || 'New'} (See Reviews)</Text>
+        </TouchableOpacity>
+      </View>
+    </Card>
   );
-  // --- END MODIFICATION ---
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <View style={styles.headerContainer}>
+        <Text style={styles.description}>
+          Post a request for {serviceName} and let providers bid for your task.
+        </Text>
+        <Button 
+          title="Create Service Request" 
+          onPress={handleMakeRequest}
+          style={styles.requestBtn}
+        />
+      </View>
+
+      <Text style={styles.listTitle}>Registered Providers</Text>
       <FlatList
-        // ... (FlatList props remain the same)
         data={providers}
         keyExtractor={(item) => item.id}
         renderItem={renderProviderCard}
         contentContainerStyle={styles.listContainer}
-        ListHeaderComponent={
-          <Text style={styles.title}>Available Providers</Text>
-        }
         ListEmptyComponent={
-          <View style={styles.centered}>
-            <Text style={styles.errorText}>No providers found for this service.</Text>
-          </View>
+          <Text style={styles.emptyText}>No specific providers listed yet. Post a request instead!</Text>
         }
       />
     </SafeAreaView>
@@ -107,67 +103,21 @@ const ServiceProvidersScreen = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  // ... (all styles remain the same)
-  safeArea: {
-    flex: 1,
-    backgroundColor: COLORS.background || '#F5F5DC',
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    marginTop: 50,
-  },
-  listContainer: {
-    padding: 16,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: COLORS.darkText || '#333333',
-    marginBottom: 16,
-  },
-  errorText: {
-    color: COLORS.greyDark,
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  providerCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-  },
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginRight: 16,
-    backgroundColor: COLORS.greyLight,
-  },
-  providerInfo: {
-    flex: 1,
-  },
-  providerName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.darkText,
-  },
-  providerSkill: {
-    fontSize: 14,
-    color: COLORS.greyDark,
-    marginVertical: 4,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ratingText: {
-    fontSize: 14,
-    color: COLORS.greyDark,
-    marginLeft: 4,
-    fontWeight: 'bold',
-  },
+  safeArea: { flex: 1, backgroundColor: COLORS.background },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  headerContainer: { padding: 16, backgroundColor: COLORS.white, borderBottomWidth: 1, borderColor: COLORS.greyLight },
+  description: { fontSize: 16, color: COLORS.darkText, marginBottom: 12 },
+  requestBtn: { backgroundColor: COLORS.primary },
+  listTitle: { fontSize: 18, fontWeight: 'bold', margin: 16, marginBottom: 8, color: COLORS.darkText },
+  listContainer: { paddingHorizontal: 16 },
+  providerCard: { flexDirection: 'row', alignItems: 'center', padding: 12, marginBottom: 10 },
+  avatar: { width: 60, height: 60, borderRadius: 30, marginRight: 16, backgroundColor: COLORS.greyLight },
+  providerInfo: { flex: 1 },
+  providerName: { fontSize: 18, fontWeight: 'bold', color: COLORS.darkText },
+  providerSkill: { fontSize: 14, color: COLORS.greyDark, marginVertical: 4 },
+  ratingContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  ratingText: { fontSize: 14, color: COLORS.primary, marginLeft: 4, fontWeight: 'bold', textDecorationLine: 'underline' },
+  emptyText: { textAlign: 'center', marginTop: 20, color: COLORS.greyDark }
 });
 
 export default ServiceProvidersScreen;

@@ -1,27 +1,19 @@
+// src/screens/Auth/RegisterScreen.js
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-  SafeAreaView,
-  ScrollView,
-  Switch,
-  Image,
+  View, Text, StyleSheet, TouchableOpacity, Alert, SafeAreaView, ScrollView, Switch, Image
 } from 'react-native';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import { authService } from '../../api/authService';
 import { profileService } from '../../api/profileService';
 import { COLORS } from '../../constants/colors';
-// We no longer need useAuth here since we are not refetching the profile
-// import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../hooks/useAuth'; // Import useAuth to refresh profile
 
 const logo = require('../../../src/assests/images/DCS-logo.png.png');
 
 const RegisterScreen = ({ navigation }) => {
-  // const { refetchProfile } = useAuth(); // No longer needed
+  const { refetchProfile } = useAuth(); // Get refetch function
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -30,7 +22,6 @@ const RegisterScreen = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // --- MODIFIED FUNCTION ---
   const handleRegister = async () => {
     if (!name || !email || !password || !confirmPassword) {
       setError('Please fill in all fields.');
@@ -40,67 +31,46 @@ const RegisterScreen = ({ navigation }) => {
       setError('Passwords do not match.');
       return;
     }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long.');
-      return;
-    }
 
     setIsLoading(true);
     setError(null);
 
+    // 1. Create User (Auto-Login happens here)
     const { user, error: authError } = await authService.registerWithEmail(email, password);
 
     if (authError) {
       setIsLoading(false);
-      if (authError.includes('auth/email-already-in-use')) {
-        Alert.alert('Registration Failed', 'This email address is already registered.');
-      } else if (authError.includes('auth/invalid-email')) {
-        Alert.alert('Registration Failed', 'Please enter a valid email address.');
-      } else {
-        Alert.alert('Registration Failed', authError);
-      }
-      setError(authError);
+      Alert.alert('Registration Failed', authError);
       return;
     }
 
+    // 2. Save Profile with isEmailVerified = false
     const profileData = {
       email: user.email,
       name: name,
       role: isProvider ? 'provider' : 'client',
+      isEmailVerified: false, // <--- CRITICAL
       createdAt: new Date(),
     };
 
-    const { success, error: profileError } =
-      await profileService.createUserProfile(user.uid, profileData);
+    const { error: profileError } = await profileService.createUserProfile(user.uid, profileData);
 
     if (profileError) {
       setIsLoading(false);
-      console.error('Error creating profile:', profileError);
-      Alert.alert(
-        'Registration Error',
-        'Your account was created, but we failed to save your profile. Please contact support.'
-      );
-      setError(profileError);
+      Alert.alert('Error', 'Account created but profile failed.');
       return;
     }
-    console.log('Registered new user:', user.uid);
-    await authService.logout();
+
+    // 3. Send OTP
+    await authService.sendEmailOTP(email);
+
+    // 4. Update App State
+    // We trigger refetchProfile so AppNavigator sees the new profile (verified=false)
+    // and automatically switches to the OTP Screen.
+    await refetchProfile();
     
     setIsLoading(false);
-
-    // 3. Alert the user and navigate to Login on press
-    Alert.alert(
-      'Success',
-      'Your account has been created. Please log in.',
-      [
-        {
-          text: 'OK',
-          onPress: () => navigation.navigate('Login'),
-        },
-      ]
-    );
   };
-  // --- END MODIFICATION ---
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -138,65 +108,18 @@ const RegisterScreen = ({ navigation }) => {
   );
 };
 
-// --- STYLES (NO CHANGE) ---
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: COLORS.background || '#F5F5DC',
-  },
-  container: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 16,
-  },
-  logo: {
-    width: 130,
-    height: 130,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: COLORS.primary || '#006270',
-    textAlign: 'center',
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: COLORS.greyDark || '#555555',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  switchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginVertical: 10,
-    paddingHorizontal: 4,
-  },
-  switchLabel: {
-    fontSize: 15,
-    color: COLORS.darkText || '#333333',
-  },
-  registerButton: {
-    marginTop: 12,
-  },
-  loginLink: {
-    marginTop: 16,
-    textAlign: 'center',
-    color: COLORS.greyDark || '#555555',
-  },
-  linkText: {
-    color: COLORS.primary || '#006270',
-    fontWeight: 'bold',
-  },
-  generalError: {
-    color: COLORS.danger || '#D9534F',
-    textAlign: 'center',
-    marginBottom: 8,
-    fontSize: 14,
-  },
+  safeArea: { flex: 1, backgroundColor: COLORS.background || '#F5F5DC' },
+  container: { flexGrow: 1, justifyContent: 'center', padding: 16 },
+  logo: { width: 130, height: 130, alignSelf: 'center', marginBottom: 16 },
+  title: { fontSize: 26, fontWeight: 'bold', color: COLORS.primary, textAlign: 'center', marginBottom: 6 },
+  subtitle: { fontSize: 15, color: COLORS.greyDark, textAlign: 'center', marginBottom: 20 },
+  switchContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginVertical: 10, paddingHorizontal: 4 },
+  switchLabel: { fontSize: 15, color: COLORS.darkText },
+  registerButton: { marginTop: 12 },
+  loginLink: { marginTop: 16, textAlign: 'center', color: COLORS.greyDark },
+  linkText: { color: COLORS.primary, fontWeight: 'bold' },
+  generalError: { color: COLORS.danger, textAlign: 'center', marginBottom: 8, fontSize: 14 },
 });
 
 export default RegisterScreen;

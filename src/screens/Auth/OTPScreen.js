@@ -1,109 +1,83 @@
 // src/screens/Auth/OTPScreen.js
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  Alert,
-  SafeAreaView,
-  TextInput,
-  TouchableOpacity,
+  View, Text, StyleSheet, Alert, SafeAreaView, TextInput, TouchableOpacity
 } from 'react-native';
-import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
 import { authService } from '../../api/authService';
-import { app } from '../../api/firebase'; // We need the 'app' export for reCAPTCHA
+import { profileService } from '../../api/profileService'; // Import profile service
 import Button from '../../components/common/Button';
 import { COLORS } from '../../constants/colors';
+import { useAuth } from '../../hooks/useAuth';
 
-/**
- * OTP Verification Screen (FR-2)
- *
- * @param {object} props
- * @param {object} props.navigation - React Navigation prop
- * @param {object} props.route - React Navigation prop (to get params)
- */
 const OTPScreen = ({ route, navigation }) => {
-  // const { phoneNumber } = route.params; // Get phone number from previous screen
-  const recaptchaVerifier = useRef(null);
+  const { user, refetchProfile } = useAuth();
+  
+  // If we came from Login/Register (logged in), get email from user object
+  // If we came from elsewhere, check params
+  const email = user?.email || route.params?.email;
+  
   const [otpCode, setOtpCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [confirmationResult, setConfirmationResult] = useState(null);
 
-  // This is a mock phone number. In a real app, you'd pass this
-  // from the Login or Register screen.
-  const phoneNumber = '+923001234567'; // EXAMPLE ONLY
-
-  // Send the OTP as soon as the screen loads
-  useEffect(() => {
-    sendVerification();
-  }, []);
-
-  const sendVerification = async () => {
-    try {
-      setIsLoading(true);
-      const { confirmationResult, error } =
-        await authService.signInWithPhoneNumber(
-          phoneNumber,
-          recaptchaVerifier.current
-        );
-
-      if (error) {
-        throw new Error(error);
-      }
-      setConfirmationResult(confirmationResult);
-      Alert.alert('OTP Sent', `An SMS code has been sent to ${phoneNumber}`);
-    } catch (error) {
-      setError(error.message);
-      Alert.alert('Error', error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const confirmCode = async () => {
-    if (!confirmationResult) {
-      setError('Please request an OTP first.');
-      return;
-    }
+  const handleVerify = async () => {
     if (otpCode.length !== 6) {
-      setError('Please enter a valid 6-digit OTP.');
+      Alert.alert('Error', 'Please enter a valid 6-digit OTP.');
       return;
     }
 
     setIsLoading(true);
-    setError(null);
 
-    const { user, error } = await authService.confirmPhoneNumberOTP(
-      confirmationResult,
-      otpCode
-    );
+    // 1. Verify Code
+    const { success, error } = await authService.verifyEmailOTP(email, otpCode);
 
-    setIsLoading(false);
-
-    if (error) {
+    if (!success) {
+      setIsLoading(false);
       Alert.alert('Verification Failed', error);
-      setError(error);
-    } else {
-      // Success! onAuthChange will handle navigation
-      console.log('Phone number verified for user:', user.uid);
+      return;
     }
+
+    // 2. If Logged In, update Profile to "Verified"
+    if (user) {
+        const { error: updateError } = await profileService.updateUserProfile(user.uid, {
+            isEmailVerified: true
+        });
+
+        if (updateError) {
+             Alert.alert("Error", "Code correct, but failed to update profile status.");
+             setIsLoading(false);
+             return;
+        }
+
+        // 3. Refresh Profile -> AppNavigator will see verified=true and switch to Home
+        await refetchProfile();
+        // No need to navigate(); AppNavigator handles the switch automatically
+    } else {
+        // Fallback for logged out flow (e.g. Forgot Password flow)
+        Alert.alert("Success", "Email verified. Please log in.");
+        navigation.navigate("Login");
+    }
+    
+    setIsLoading(false);
+  };
+
+  const handleResend = async () => {
+      setIsLoading(true);
+      await authService.sendEmailOTP(email);
+      setIsLoading(false);
+      Alert.alert("Sent", "New code sent.");
+  };
+
+  const handleLogout = async () => {
+      await authService.logout();
+      // AppNavigator will switch to AuthStack -> Login
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <FirebaseRecaptchaVerifierModal
-        ref={recaptchaVerifier}
-        firebaseConfig={app.options}
-        // Use this for invisible reCAPTCHA
-        invisible={true}
-      />
-
       <View style={styles.container}>
-        <Text style={styles.title}>Verify Your Number</Text>
-        <Text style={styles.subtitle}>
-          Please enter the 6-digit code sent to {phoneNumber}
-        </Text>
+        <Text style={styles.title}>Verify Email</Text>
+        <Text style={styles.subtitle}>Enter the 6-digit code sent to:</Text>
+        <Text style={styles.emailText}>{email}</Text>
 
         <TextInput
           style={styles.otpInput}
@@ -115,25 +89,21 @@ const OTPScreen = ({ route, navigation }) => {
           placeholderTextColor={COLORS.grey}
         />
 
-        {error && <Text style={styles.generalError}>{error}</Text>}
-
         <Button
           title="Verify Code"
-          onPress={confirmCode}
+          onPress={handleVerify}
           loading={isLoading}
           style={styles.verifyButton}
         />
 
-        <TouchableOpacity onPress={sendVerification} disabled={isLoading}>
+        <TouchableOpacity onPress={handleResend} disabled={isLoading}>
           <Text style={styles.resendLink}>
             Didn't receive a code? <Text style={styles.linkText}>Resend</Text>
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.resendLink}>
-            <Text style={styles.linkText}>Back to Login</Text>
-          </Text>
+        <TouchableOpacity onPress={handleLogout} style={{marginTop: 30}}>
+            <Text style={{textAlign: 'center', color: COLORS.danger}}>Log Out / Cancel</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -141,56 +111,15 @@ const OTPScreen = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: COLORS.background || '#F5F5DC',
-  },
-  container: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.primary || '#006270',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: COLORS.greyDark || '#555555',
-    textAlign: 'center',
-    marginBottom: 32,
-  },
-  otpInput: {
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.grey,
-    borderRadius: 8,
-    padding: 16,
-    fontSize: 24,
-    textAlign: 'center',
-    letterSpacing: 10,
-    marginBottom: 24,
-  },
-  verifyButton: {
-    marginTop: 16,
-  },
-  resendLink: {
-    marginTop: 24,
-    textAlign: 'center',
-    color: COLORS.greyDark || '#555555',
-  },
-  linkText: {
-    color: COLORS.primary || '#006270',
-    fontWeight: 'bold',
-  },
-  generalError: {
-    color: COLORS.danger || '#D9534F',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
+  safeArea: { flex: 1, backgroundColor: COLORS.background || '#F5F5DC' },
+  container: { flexGrow: 1, justifyContent: 'center', padding: 24 },
+  title: { fontSize: 28, fontWeight: 'bold', color: COLORS.primary, textAlign: 'center', marginBottom: 8 },
+  subtitle: { fontSize: 16, color: COLORS.greyDark, textAlign: 'center' },
+  emailText: { fontSize: 18, fontWeight: 'bold', color: COLORS.darkText, textAlign: 'center', marginBottom: 32, marginTop: 5 },
+  otpInput: { backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.grey, borderRadius: 8, padding: 16, fontSize: 24, textAlign: 'center', letterSpacing: 10, marginBottom: 24 },
+  verifyButton: { marginTop: 16 },
+  resendLink: { marginTop: 24, textAlign: 'center', color: COLORS.greyDark },
+  linkText: { color: COLORS.primary, fontWeight: 'bold' },
 });
 
 export default OTPScreen;

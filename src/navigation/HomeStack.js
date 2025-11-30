@@ -1,31 +1,36 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-// Import the screens for the "Home" tab flow
 import SearchServicesScreen from '../screens/Booking/SearchServicesScreen';
 import ServiceProvidersScreen from '../screens/Booking/ServiceProvidersScreen';
-import ScheduleScreen from '../screens/Booking/ScheduleScreen';
+import CreateRequestScreen from '../screens/Booking/CreateRequestScreen';
+import ProviderReviewsScreen from '../screens/Booking/ProviderReviewsScreen';
+// ScheduleScreen removed or kept as legacy, replacing flow with CreateRequest
 
 const Stack = createNativeStackNavigator();
 
-// This navigator handles the entire booking flow
 const HomeStack = () => {
   return (
     <Stack.Navigator>
       <Stack.Screen
         name="SearchServices"
         component={SearchServicesScreen}
-        options={{ headerShown: false }} // The tab navigator already has a header
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="ServiceProviders"
         component={ServiceProvidersScreen}
-        options={{ title: 'Available Providers' }} // Header title for this screen
+        options={{ title: 'Service Details' }}
       />
       <Stack.Screen
-        name="ScheduleScreen"
-        component={ScheduleScreen}
-        options={{ title: 'Schedule Booking' }}
+        name="CreateRequestScreen"
+        component={CreateRequestScreen}
+        options={{ title: 'Make a Request' }}
+      />
+      <Stack.Screen
+        name="ProviderReviewsScreen"
+        component={ProviderReviewsScreen}
+        options={{ title: 'Provider Reviews' }}
       />
     </Stack.Navigator>
   );
