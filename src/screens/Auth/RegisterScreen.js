@@ -1,19 +1,32 @@
 // src/screens/Auth/RegisterScreen.js
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Alert, SafeAreaView, ScrollView, Switch, Image
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  ScrollView,
+  Switch,
+  Image,
+  StatusBar,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import { authService } from '../../api/authService';
 import { profileService } from '../../api/profileService';
 import { COLORS } from '../../constants/colors';
-import { useAuth } from '../../hooks/useAuth'; // Import useAuth to refresh profile
+import { useAuth } from '../../hooks/useAuth';
 
 const logo = require('../../../src/assests/images/DCS-logo.png.png');
 
 const RegisterScreen = ({ navigation }) => {
-  const { refetchProfile } = useAuth(); // Get refetch function
+  const insets = useSafeAreaInsets();
+  const { refetchProfile } = useAuth();
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -31,95 +44,170 @@ const RegisterScreen = ({ navigation }) => {
       setError('Passwords do not match.');
       return;
     }
-
     setIsLoading(true);
     setError(null);
 
-    // 1. Create User (Auto-Login happens here)
     const { user, error: authError } = await authService.registerWithEmail(email, password);
-
     if (authError) {
       setIsLoading(false);
       Alert.alert('Registration Failed', authError);
       return;
     }
 
-    // 2. Save Profile with isEmailVerified = false
     const profileData = {
       email: user.email,
       name: name,
       role: isProvider ? 'provider' : 'client',
-      isEmailVerified: false, // <--- CRITICAL
+      isEmailVerified: false,
       createdAt: new Date(),
     };
 
     const { error: profileError } = await profileService.createUserProfile(user.uid, profileData);
-
     if (profileError) {
       setIsLoading(false);
-      Alert.alert('Error', 'Account created but profile failed.');
+      Alert.alert('Error', 'Profile creation failed.');
       return;
     }
 
-    // 3. Send OTP
     await authService.sendEmailOTP(email);
-
-    // 4. Update App State
-    // We trigger refetchProfile so AppNavigator sees the new profile (verified=false)
-    // and automatically switches to the OTP Screen.
     await refetchProfile();
-    
     setIsLoading(false);
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Image source={logo} style={styles.logo} resizeMode="contain" />
-        <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Sign up to get started</Text>
+    <View style={styles.container}>
+      <StatusBar backgroundColor={COLORS.primary} barStyle="light-content" />
 
-        <Input label="Full Name" placeholder="Your full name" value={name} onChangeText={setName} />
-        <Input label="Email" placeholder="you@example.com" value={email} onChangeText={setEmail} keyboardType="email-address" />
-        <Input label="Password" placeholder="Minimum 6 characters" value={password} onChangeText={setPassword} secureTextEntry />
-        <Input label="Confirm Password" placeholder="Repeat your password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
-
-        <View style={styles.switchContainer}>
-          <Text style={styles.switchLabel}>Are you a Service Provider?</Text>
-          <Switch
-            trackColor={{ false: COLORS.grey, true: COLORS.primaryLight }}
-            thumbColor={isProvider ? COLORS.primary : COLORS.greyLight}
-            onValueChange={setIsProvider}
-            value={isProvider}
-          />
+      {/* --- Fixed Header --- */}
+      <View style={[styles.headerBackground, { paddingTop: insets.top, height: 240 }]}>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Create Account</Text>
+          <Text style={styles.headerSubtitle}>Join Domestic Care Services</Text>
         </View>
+      </View>
 
-        {error && <Text style={styles.generalError}>{error}</Text>}
+      {/* --- Scrollable Content --- */}
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1, zIndex: 10 }}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent} 
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          
+          {/* Logo Container */}
+          <View style={styles.logoContainer}>
+             <View style={styles.logoCircle}>
+               <Image source={logo} style={styles.logo} resizeMode="contain" />
+             </View>
+          </View>
 
-        <Button title="Sign Up" onPress={handleRegister} loading={isLoading} style={styles.registerButton} />
+          {/* Form Card */}
+          <View style={styles.card}>
+             <View style={{ marginTop: 40 }}>
+                <Input label="Full Name" placeholder="John Doe" value={name} onChangeText={setName} />
+                <Input label="Email" placeholder="you@example.com" value={email} onChangeText={setEmail} keyboardType="email-address" />
+                <Input label="Password" placeholder="Min 6 chars" value={password} onChangeText={setPassword} secureTextEntry />
+                <Input label="Confirm Password" placeholder="Repeat password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
 
-        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.loginLink}>
-            Already have an account? <Text style={styles.linkText}>Log In</Text>
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+                <View style={styles.roleContainer}>
+                    <View style={{flex: 1}}>
+                       <Text style={styles.roleTitle}>Service Provider Account</Text>
+                       <Text style={styles.roleDesc}>Enable to offer services.</Text>
+                    </View>
+                    <Switch
+                      trackColor={{ false: '#E0E0E0', true: COLORS.secondary }}
+                      thumbColor={isProvider ? COLORS.primary : '#F5F5F5'}
+                      onValueChange={setIsProvider}
+                      value={isProvider}
+                    />
+                </View>
+
+                {error && <Text style={styles.errorText}>{error}</Text>}
+
+                <Button 
+                    title="Sign Up" 
+                    onPress={handleRegister} 
+                    loading={isLoading} 
+                    style={styles.registerButton} 
+                />
+             </View>
+          </View>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Already have an account? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+              <Text style={styles.footerLink}>Log In</Text>
+            </TouchableOpacity>
+          </View>
+
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: COLORS.background || '#F5F5DC' },
-  container: { flexGrow: 1, justifyContent: 'center', padding: 16 },
-  logo: { width: 130, height: 130, alignSelf: 'center', marginBottom: 16 },
-  title: { fontSize: 26, fontWeight: 'bold', color: COLORS.primary, textAlign: 'center', marginBottom: 6 },
-  subtitle: { fontSize: 15, color: COLORS.greyDark, textAlign: 'center', marginBottom: 20 },
-  switchContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginVertical: 10, paddingHorizontal: 4 },
-  switchLabel: { fontSize: 15, color: COLORS.darkText },
-  registerButton: { marginTop: 12 },
-  loginLink: { marginTop: 16, textAlign: 'center', color: COLORS.greyDark },
-  linkText: { color: COLORS.primary, fontWeight: 'bold' },
-  generalError: { color: COLORS.danger, textAlign: 'center', marginBottom: 8, fontSize: 14 },
+  container: { flex: 1, backgroundColor: COLORS.background },
+  
+  headerBackground: {
+    backgroundColor: COLORS.primary,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    alignItems: 'center',
+    position: 'absolute',
+    top: 0, left: 0, right: 0,
+    zIndex: 0,
+  },
+  headerContent: { marginTop: 40, alignItems: 'center' },
+  headerTitle: { fontSize: 26, fontWeight: 'bold', color: '#FFF', marginBottom: 4 },
+  headerSubtitle: { fontSize: 14, color: 'rgba(255,255,255,0.8)' },
+
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 160,
+    paddingBottom: 40,
+  },
+
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: -50,
+    zIndex: 20,
+    elevation: 10,
+  },
+  logoCircle: {
+    backgroundColor: '#FFF',
+    width: 90, height: 90,
+    borderRadius: 45,
+    justifyContent: 'center', alignItems: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 5, elevation: 5,
+  },
+  logo: { width: 60, height: 60 },
+
+  card: {
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5,
+    zIndex: 1,
+  },
+
+  roleContainer: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#F9F9F9', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#EEE', marginVertical: 10,
+  },
+  roleTitle: { fontSize: 14, fontWeight: 'bold', color: COLORS.darkText },
+  roleDesc: { fontSize: 11, color: COLORS.greyDark, marginTop: 2 },
+
+  errorText: { color: COLORS.danger, textAlign: 'center', marginBottom: 10, fontSize: 14 },
+  registerButton: { marginTop: 8, borderRadius: 12 },
+
+  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
+  footerText: { color: COLORS.greyDark, fontSize: 15 },
+  footerLink: { color: COLORS.primary, fontWeight: 'bold', fontSize: 15 },
 });
 
 export default RegisterScreen;

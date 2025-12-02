@@ -1,3 +1,4 @@
+// src/screens/Support/HelpCenterScreen.js
 import React from 'react';
 import {
   View,
@@ -5,97 +6,232 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Card from '../../components/common/Card';
 import { COLORS } from '../../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 
 /**
- * Help Center Screen (Module 5)
- *
- * @param {object} props
- * @param {object} props.navigation - React Navigation prop
+ * A modern, individual card for support options.
  */
+const SupportOption = ({ icon, title, subtitle, onPress }) => (
+  <TouchableOpacity 
+    style={styles.optionCard} 
+    onPress={onPress}
+    activeOpacity={0.8}
+  >
+    <View style={styles.iconCircle}>
+      <Ionicons name={icon} size={24} color={COLORS.primary} />
+    </View>
+    <View style={styles.textContainer}>
+      <Text style={styles.optionTitle}>{title}</Text>
+      <Text style={styles.optionSubtitle}>{subtitle}</Text>
+    </View>
+    <View style={styles.arrowContainer}>
+      <Ionicons name="chevron-forward" size={20} color={COLORS.greyDark} />
+    </View>
+  </TouchableOpacity>
+);
+
 const HelpCenterScreen = ({ navigation }) => {
-  // <-- 2. GET NAVIGATION PROP
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>How can we help?</Text>
+      <StatusBar backgroundColor={COLORS.primary} barStyle="light-content" />
+      
+      {/* --- Modern Header --- */}
+      <View style={styles.headerContainer}>
+        <Text style={styles.headerTitle}>Help Center</Text>
+        <Text style={styles.headerSubtitle}>We're here to assist you anytime.</Text>
+      </View>
 
-        <Card style={styles.menuCard}>
-          <SupportMenuItem
-            icon="help-circle-outline"
-            label="FAQs & Help Guides "
-            // --- 3. ADD NAVIGATION ---
-            onPress={() => navigation.navigate('FaqsScreen')}
-          />
-          <SupportMenuItem
-            icon="chatbubble-ellipses-outline"
-            label="24/7 Chatbot Support "
-            onPress={() => {
-              /* Navigate to Chatbot Screen */
-            }}
-          />
-          <SupportMenuItem
-            icon="call-outline"
-            label="Call Center "
-            onPress={() => {
-              /* Initiate call or show number */
-            }}
-          />
-          <SupportMenuItem
-            icon="ticket-outline"
-            label="Submit a Ticket "
-            onPress={() => {
-              /* Navigate to Ticket Submission Screen */
-            }}
-          />
-        </Card>
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        
+        {/* --- Hero Banner (Mustard) --- */}
+        <View style={styles.heroBanner}>
+          <View style={styles.heroContent}>
+            <Text style={styles.heroTitle}>Need quick help?</Text>
+            <Text style={styles.heroText}>Our support team is available 24/7 to solve your issues.</Text>
+          </View>
+          <Ionicons name="headset" size={50} color={COLORS.primary} style={{ opacity: 0.8 }} />
+        </View>
+
+        <Text style={styles.sectionLabel}>Select an option</Text>
+
+        {/* --- Option Cards --- */}
+        <SupportOption
+          icon="book-outline"
+          title="FAQs & Help Guides"
+          subtitle="Find answers to common questions"
+          onPress={() => navigation.navigate('FaqsScreen')}
+        />
+
+        <SupportOption
+          icon="chatbubbles-outline"
+          title="24/7 Chatbot Support"
+          subtitle="Get instant answers from our bot"
+          onPress={() => {
+            /* Navigate to Chatbot */
+          }}
+        />
+
+        <SupportOption
+          icon="call-outline"
+          title="Call Center"
+          subtitle="Speak directly with an agent"
+          onPress={() => {
+            /* Call Action */
+          }}
+        />
+
+        <SupportOption
+          icon="ticket-outline"
+          title="Submit a Ticket"
+          subtitle="Report an issue or request help"
+          onPress={() => {
+            /* Navigate to Ticket Screen */
+          }}
+        />
+
+        {/* --- Footer Info --- */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Domestic Care Services v1.0.0</Text>
+        </View>
+
       </ScrollView>
     </SafeAreaView>
   );
 };
 
-const SupportMenuItem = ({ icon, label, onPress }) => (
-  <TouchableOpacity style={styles.menuItem} onPress={onPress}>
-    <Ionicons name={icon} size={24} color={COLORS.primary} />
-    <Text style={styles.menuLabel}>{label}</Text>
-    <Ionicons name="chevron-forward" size={24} color={COLORS.grey} />
-  </TouchableOpacity>
-);
-
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.background || '#F5F5DC',
+    backgroundColor: COLORS.background, // Beige
   },
+  // Header Styles
+  headerContainer: {
+    backgroundColor: COLORS.primary, // Deep Teal
+    paddingHorizontal: 24,
+    paddingTop: 10,
+    paddingBottom: 30,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+    marginBottom: 20,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#FFF',
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.85)',
+  },
+  
+  // Scroll Content
   container: {
-    padding: 24,
+    paddingHorizontal: 20,
+    paddingBottom: 30,
   },
-  title: {
-    fontSize: 24,
+
+  // Hero Banner
+  heroBanner: {
+    backgroundColor: COLORS.secondary, // Mustard
+    borderRadius: 20,
+    padding: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  heroContent: {
+    flex: 1,
+    marginRight: 10,
+  },
+  heroTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+    marginBottom: 4,
+  },
+  heroText: {
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 20,
+  },
+
+  // Section Label
+  sectionLabel: {
+    fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.darkText,
     marginBottom: 16,
+    marginLeft: 4,
   },
-  menuCard: {
-    paddingVertical: 8,
-  },
-  menuItem: {
+
+  // Option Card Styles
+  optionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 18,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.greyLight,
+    backgroundColor: '#FFF',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+    // Soft Shadow
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.02)',
   },
-  menuLabel: {
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.primaryLight || '#E0F2F1', // Light Teal background
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  textContainer: {
     flex: 1,
+  },
+  optionTitle: {
     fontSize: 16,
+    fontWeight: 'bold',
     color: COLORS.darkText,
-    marginLeft: 16,
+    marginBottom: 2,
+  },
+  optionSubtitle: {
+    fontSize: 13,
+    color: COLORS.greyDark,
+  },
+  arrowContainer: {
+    paddingLeft: 10,
+  },
+
+  // Footer
+  footer: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  footerText: {
+    color: COLORS.greyDark,
+    fontSize: 12,
+    opacity: 0.6,
   },
 });
 

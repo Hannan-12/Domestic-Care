@@ -1,14 +1,13 @@
 // src/screens/Provider/JobBoardScreen.js
 import React, { useState, useEffect } from 'react';
 import { 
-  View, FlatList, Text, TextInput, Alert, StyleSheet, RefreshControl 
+  View, FlatList, Text, TextInput, Alert, StyleSheet, RefreshControl, TouchableOpacity, StatusBar
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { bookingService } from '../../api/bookingService';
 import { useAuth } from '../../hooks/useAuth';
-import Card from '../../components/common/Card';
-import Button from '../../components/common/Button';
 import { COLORS } from '../../constants/colors';
+import { Ionicons } from '@expo/vector-icons';
 
 const JobBoardScreen = ({ navigation }) => { 
   const { user, profile } = useAuth();
@@ -19,22 +18,23 @@ const JobBoardScreen = ({ navigation }) => {
   const [bidAmount, setBidAmount] = useState('');
   const [comment, setComment] = useState('');
 
+  // --- Verification Check UI ---
   if (profile?.role === 'provider' && profile?.verificationStatus !== 'approved') {
     return (
-       <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-         <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 10, color: COLORS.darkText }}>
-            Action Required
-         </Text>
-         <Text style={{ textAlign: 'center', marginBottom: 20, fontSize: 16, color: COLORS.greyDark, paddingHorizontal: 20 }}>
+       <SafeAreaView style={styles.verificationContainer}>
+         <Ionicons name="shield-checkmark-outline" size={80} color={COLORS.grey} />
+         <Text style={styles.verificationTitle}>Action Required</Text>
+         <Text style={styles.verificationText}>
            {profile?.verificationStatus === 'pending' 
-             ? "Your documents are currently under review. You cannot bid yet." 
-             : "You must verify your identity before bidding."}
+             ? "Your documents are currently under review. Please wait for admin approval." 
+             : "You must verify your identity before you can bid on jobs."}
          </Text>
-         <Button 
-           title="Verify Identity Now" 
-           onPress={() => navigation.navigate('ProviderVerificationScreen')} 
-           style={{ width: '80%' }}
-         />
+         <TouchableOpacity 
+           style={styles.verifyButton}
+           onPress={() => navigation.navigate('ProviderVerificationScreen')}
+         >
+           <Text style={styles.verifyButtonText}>Verify Identity Now</Text>
+         </TouchableOpacity>
        </SafeAreaView>
     );
   }
@@ -64,7 +64,7 @@ const JobBoardScreen = ({ navigation }) => {
     );
     
     if (success) {
-      Alert.alert("Success", "Your bid has been updated!");
+      Alert.alert("Success", "Your bid has been sent!");
       setSelectedJobId(null);
       setBidAmount('');
       setComment('');
@@ -74,102 +74,253 @@ const JobBoardScreen = ({ navigation }) => {
     }
   };
 
-  // NEW: Provider enters chat with their OWN providerId
-  const handleChat = (item) => {
-      navigation.navigate('ChatScreen', { 
-          requestId: item.id, 
-          chatTitle: item.clientName || item.serviceName,
-          providerId: user.uid 
-      });
-  };
-
   const startEditing = (item, myBid) => {
     setBidAmount(myBid.offerAmount.toString());
     setComment(myBid.comment);
     setSelectedJobId(item.id); 
   };
 
+  // --- Render Item ---
   const renderJob = ({ item }) => {
     const myBid = item.bids?.find(b => b.providerId === user.uid);
     const isEditing = selectedJobId === item.id;
 
     return (
-      <Card style={styles.card}>
-        <View style={styles.headerRow}>
-            <Text style={styles.title}>{item.serviceName}</Text>
-            <Text style={styles.priceTag}>Est: {item.offeredPrice} Rs</Text>
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+            <View style={styles.iconBox}>
+                <Ionicons name="briefcase" size={20} color={COLORS.primary} />
+            </View>
+            <View style={{flex: 1}}>
+                <Text style={styles.serviceName}>{item.serviceName}</Text>
+                <Text style={styles.clientName}>{item.clientName || 'Client'}</Text>
+            </View>
+            <View style={styles.priceTag}>
+                <Text style={styles.priceText}>{item.offeredPrice} Rs</Text>
+                <Text style={styles.estText}>Est. Budget</Text>
+            </View>
         </View>
-        <Text style={styles.address}>📍 {item.address}</Text>
-        <Text style={styles.time}>📅 {item.startTime ? new Date(item.startTime).toLocaleDateString() : ''}</Text>
-        <Text style={styles.desc}>"{item.comments}"</Text>
 
-        {isEditing ? (
-          <View style={styles.bidForm}>
-            <Text style={styles.formTitle}>{myBid ? 'Edit Your Offer' : 'Your Offer'}</Text>
-            <TextInput 
-              placeholder="Your Price (Rs)" 
-              style={styles.input} 
-              keyboardType="numeric" 
-              value={bidAmount}
-              onChangeText={setBidAmount}
-            />
-            <TextInput 
-              placeholder="Comments" 
-              style={styles.input} 
-              value={comment}
-              onChangeText={setComment}
-            />
-            <View style={styles.btnRow}>
-                <Button title="Update Bid" onPress={() => handleBid(item.id)} style={{flex:1, marginRight: 5}}/>
-                <Button title="Cancel" onPress={() => setSelectedJobId(null)} type="secondary" style={{flex:1}}/>
-            </View>
-          </View>
-        ) : myBid ? (
-            <View style={styles.alreadyBid}>
-                <Text style={styles.bidText}>You offered: {myBid.offerAmount} Rs</Text>
-                <Text style={styles.statusText}>Waiting for Client Response</Text>
-                <View style={styles.btnRow}>
-                    <Button title="Chat with Client" onPress={() => handleChat(item)} type="secondary" style={{ flex: 1, marginRight: 5 }} />
-                    <Button title="Edit Bid" onPress={() => startEditing(item, myBid)} type="primary" style={{ flex: 1 }} />
+        <View style={styles.divider} />
+
+        <View style={styles.detailsRow}>
+            <Ionicons name="location-outline" size={16} color={COLORS.greyDark} />
+            <Text style={styles.detailText}>{item.address}</Text>
+        </View>
+        <View style={styles.detailsRow}>
+            <Ionicons name="calendar-outline" size={16} color={COLORS.greyDark} />
+            <Text style={styles.detailText}>
+                {item.startTime ? new Date(item.startTime).toLocaleDateString() : 'Flexible'}
+            </Text>
+        </View>
+        
+        {item.comments ? (
+            <Text style={styles.commentText}>"{item.comments}"</Text>
+        ) : null}
+
+        {/* --- Bidding Section --- */}
+        <View style={styles.actionSection}>
+            {isEditing ? (
+              <View style={styles.editForm}>
+                <Text style={styles.formLabel}>{myBid ? 'Update Offer' : 'Place Your Bid'}</Text>
+                <View style={styles.inputRow}>
+                    <TextInput 
+                      placeholder="Price (Rs)" 
+                      style={[styles.input, { flex: 0.4 }]} 
+                      keyboardType="numeric" 
+                      value={bidAmount}
+                      onChangeText={setBidAmount}
+                    />
+                    <TextInput 
+                      placeholder="Short comment..." 
+                      style={[styles.input, { flex: 0.6 }]} 
+                      value={comment}
+                      onChangeText={setComment}
+                    />
                 </View>
-            </View>
-        ) : (
-          <Button title="Place a Bid" onPress={() => { setBidAmount(''); setComment(''); setSelectedJobId(item.id); }} type="secondary" style={{marginTop: 10}} />
-        )}
-      </Card>
+                <View style={styles.formBtnRow}>
+                    <TouchableOpacity style={styles.cancelBtn} onPress={() => setSelectedJobId(null)}>
+                        <Text style={styles.cancelText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.submitBtn} onPress={() => handleBid(item.id)}>
+                        <Text style={styles.submitText}>Send Bid</Text>
+                    </TouchableOpacity>
+                </View>
+              </View>
+            ) : myBid ? (
+                <View style={styles.bidStatusBox}>
+                    <View>
+                        <Text style={styles.bidStatusTitle}>Bid Sent</Text>
+                        <Text style={styles.bidStatusAmount}>Your Offer: {myBid.offerAmount} Rs</Text>
+                    </View>
+                    <TouchableOpacity style={styles.editBtn} onPress={() => startEditing(item, myBid)}>
+                        <Ionicons name="create-outline" size={20} color={COLORS.primary} />
+                    </TouchableOpacity>
+                </View>
+            ) : (
+              <TouchableOpacity 
+                style={styles.placeBidBtn} 
+                onPress={() => { setBidAmount(''); setComment(''); setSelectedJobId(item.id); }}
+              >
+                <Text style={styles.placeBidText}>Place a Bid</Text>
+                <Ionicons name="arrow-forward" size={18} color="#FFF" />
+              </TouchableOpacity>
+            )}
+        </View>
+      </View>
     );
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+       <StatusBar backgroundColor={COLORS.primary} barStyle="light-content" />
+       
+       {/* --- Header --- */}
+       <View style={styles.headerBackground}>
+         <Text style={styles.headerTitle}>Job Board</Text>
+         <Text style={styles.headerSubtitle}>Find your next opportunity</Text>
+       </View>
+
+       {/* --- Summary Banner (Mustard) --- */}
+       <View style={styles.summaryBanner}>
+          <View>
+             <Text style={styles.bannerTitle}>Open Requests</Text>
+             <Text style={styles.bannerSubtitle}>{requests.length} jobs available for bidding</Text>
+          </View>
+          <Ionicons name="megaphone-outline" size={32} color={COLORS.darkText} />
+       </View>
+
        <FlatList 
          data={requests} 
          renderItem={renderJob} 
          keyExtractor={item => item.id}
          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={loadJobs} />}
-         contentContainerStyle={{paddingBottom: 20}}
-         ListEmptyComponent={<Text style={{textAlign:'center', marginTop: 20}}>No open jobs currently.</Text>}
+         contentContainerStyle={styles.listContent}
+         showsVerticalScrollIndicator={false}
+         ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+                <Ionicons name="briefcase-outline" size={60} color={COLORS.grey} />
+                <Text style={styles.emptyText}>No open jobs right now.</Text>
+            </View>
+         }
        />
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: COLORS.background },
-  card: { padding: 16, marginBottom: 12 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5},
-  title: { fontSize: 18, fontWeight: 'bold', color: COLORS.primary },
-  priceTag: { fontSize: 16, fontWeight: 'bold', color: COLORS.secondary },
-  address: { color: COLORS.greyDark, marginBottom: 4 },
-  time: { color: COLORS.greyDark, marginBottom: 8 },
-  desc: { fontStyle: 'italic', color: '#555', marginBottom: 8 },
-  bidForm: { marginTop: 10, borderTopWidth: 1, borderColor: '#eee', paddingTop: 10 },
-  formTitle: { fontWeight: 'bold', marginBottom: 8},
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 5, padding: 10, marginBottom: 8, backgroundColor: '#fff' },
-  btnRow: { flexDirection: 'row', marginTop: 10 },
-  alreadyBid: { backgroundColor: '#E0F2F1', padding: 10, borderRadius: 5, marginTop: 10 },
-  bidText: { fontWeight: 'bold', color: COLORS.primary },
-  statusText: { fontSize: 12, color: COLORS.greyDark }
+  container: { flex: 1, backgroundColor: COLORS.background },
+  
+  // --- Header Styles ---
+  headerBackground: {
+    backgroundColor: COLORS.primary, // Teal
+    paddingTop: 60,
+    paddingBottom: 40,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    alignItems: 'center',
+  },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#FFF' },
+  headerSubtitle: { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 4 },
+
+  // --- Banner ---
+  summaryBanner: {
+    backgroundColor: COLORS.secondary, // Mustard
+    marginHorizontal: 20,
+    marginTop: -25,
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+    marginBottom: 10,
+  },
+  bannerTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.darkText },
+  bannerSubtitle: { fontSize: 13, color: COLORS.darkText },
+
+  // --- Verification ---
+  verificationContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 30, backgroundColor: COLORS.background },
+  verificationTitle: { fontSize: 22, fontWeight: 'bold', marginVertical: 10, color: COLORS.darkText },
+  verificationText: { textAlign: 'center', color: COLORS.greyDark, marginBottom: 20 },
+  verifyButton: { backgroundColor: COLORS.primary, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 25 },
+  verifyButtonText: { color: '#FFF', fontWeight: 'bold' },
+
+  // --- Card Styles ---
+  listContent: { paddingHorizontal: 20, paddingBottom: 20, paddingTop: 10 },
+  card: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.02)',
+  },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  iconBox: {
+    width: 40, height: 40, borderRadius: 12, backgroundColor: '#E0F2F1', // Light Teal
+    justifyContent: 'center', alignItems: 'center', marginRight: 12
+  },
+  serviceName: { fontSize: 16, fontWeight: 'bold', color: COLORS.darkText },
+  clientName: { fontSize: 12, color: COLORS.greyDark },
+  priceTag: { alignItems: 'flex-end' },
+  priceText: { fontSize: 16, fontWeight: 'bold', color: COLORS.secondary },
+  estText: { fontSize: 10, color: COLORS.greyDark },
+  
+  divider: { height: 1, backgroundColor: '#F0F0F0', marginVertical: 8 },
+  
+  detailsRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  detailText: { marginLeft: 8, fontSize: 13, color: COLORS.greyDark },
+  commentText: { fontSize: 13, fontStyle: 'italic', color: '#666', marginTop: 4, marginBottom: 12 },
+
+  // --- Action Section ---
+  actionSection: { marginTop: 8 },
+  placeBidBtn: {
+    backgroundColor: COLORS.primary,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  placeBidText: { color: '#FFF', fontWeight: 'bold', marginRight: 8 },
+
+  // --- Form ---
+  editForm: { backgroundColor: '#FAFAFA', padding: 10, borderRadius: 8 },
+  formLabel: { fontSize: 12, fontWeight: 'bold', color: COLORS.greyDark, marginBottom: 8 },
+  inputRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  input: {
+    backgroundColor: '#FFF', borderWidth: 1, borderColor: '#EEE', borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 8, fontSize: 14
+  },
+  formBtnRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
+  cancelBtn: { paddingVertical: 8, paddingHorizontal: 12 },
+  cancelText: { color: COLORS.greyDark, fontSize: 13 },
+  submitBtn: { backgroundColor: COLORS.primary, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8 },
+  submitText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
+
+  // --- Bid Status ---
+  bidStatusBox: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    backgroundColor: '#E8F5E9', padding: 12, borderRadius: 12, borderLeftWidth: 4, borderLeftColor: COLORS.success
+  },
+  bidStatusTitle: { fontSize: 12, color: COLORS.success, fontWeight: 'bold' },
+  bidStatusAmount: { fontSize: 14, fontWeight: 'bold', color: COLORS.darkText },
+  editBtn: { padding: 4 },
+
+  // --- Empty ---
+  emptyContainer: { alignItems: 'center', marginTop: 50 },
+  emptyText: { color: COLORS.greyDark, marginTop: 10 },
 });
 
 export default JobBoardScreen;

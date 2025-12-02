@@ -3,42 +3,31 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import Card from '../common/Card';
 import { COLORS } from '../../constants/colors';
-
-/**
- * A card component to display a single service (e.g., Housekeeping).
- *
- * @param {object} props
- * @param {object} props.service - The service object.
- * @param {string} props.service.Name - The name of the service (Corrected: Capital 'N').
- * @param {string} [props.service.description] - A short description.
- * @param {string} [props.service.imageUrl] - URL for the service image.
- * @param {function} props.onPress - Function to call when the card is pressed.
- */
+import { Ionicons } from '@expo/vector-icons';
 const ServiceCard = ({ service, onPress }) => {
-  // Define a placeholder image path
-  const placeholderImage = require('/Users/muhammadhannanhafeez/React native /Domestic-Care/src/assests/images/icon.jpeg'); // Or icon.png
+  // Placeholder image from your assets
+  const placeholderImage = require('../../assests/images/icon.jpeg'); // Adjusted path based on structure
 
   return (
-    <TouchableOpacity onPress={() => onPress(service)}>
-      <Card style={styles.container}>
+    <TouchableOpacity onPress={() => onPress(service)} activeOpacity={0.8}>
+      <Card style={styles.cardStyle}>
         <Image
           style={styles.image}
           source={
             service.imageUrl
               ? { uri: service.imageUrl }
-              : placeholderImage // Use the defined placeholder
+              : placeholderImage 
           }
-          // Add error handling for network images
-          onError={(e) => console.log('Failed to load image:', e.nativeEvent.error)}
+          resizeMode="cover"
         />
         <View style={styles.textContainer}>
-          {/* Corrected: Use service.Name with capital 'N' */}
           <Text style={styles.title}>{service.Name}</Text>
-          {service.description && (
-            <Text style={styles.description} numberOfLines={2}>
-              {service.description}
-            </Text>
-          )}
+          <Text style={styles.description} numberOfLines={2}>
+            {service.description || "Professional services at your doorstep."}
+          </Text>
+        </View>
+        <View style={styles.iconContainer}>
+           <Ionicons name="chevron-forward" size={24} color={COLORS.primary} />
         </View>
       </Card>
     </TouchableOpacity>
@@ -46,30 +35,41 @@ const ServiceCard = ({ service, onPress }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  cardStyle: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 16, // Softer corners
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   image: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
+    width: 64,
+    height: 64,
+    borderRadius: 12,
     marginRight: 16,
-    backgroundColor: COLORS.greyLight || '#EEEEEE',
+    backgroundColor: COLORS.greyLight,
   },
   textContainer: {
     flex: 1,
+    justifyContent: 'center',
   },
   title: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: COLORS.darkText || '#333333',
+    color: COLORS.darkText,
+    marginBottom: 4,
   },
   description: {
-    fontSize: 14,
-    color: COLORS.greyDark || '#555555',
-    marginTop: 4,
+    fontSize: 13,
+    color: COLORS.greyDark,
+    lineHeight: 18,
+  },
+  iconContainer: {
+    paddingLeft: 8,
+    justifyContent: 'center',
   },
 });
 

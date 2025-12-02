@@ -169,6 +169,19 @@ const updateBookingStatus = async (bookingId, status) => {
     } catch(e) { return { success: false, error: e.message }; }
 };
 
+// --- NEW FUNCTION: Skip Rating ---
+const skipRating = async (bookingId) => {
+    try {
+        const bookingRef = doc(firestoreDB, BOOKINGS_COLLECTION, bookingId);
+        await updateDoc(bookingRef, {
+            ratingSkipped: true
+        });
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+};
+
 // --- REQUESTS FUNCTIONS ---
 
 const createServiceRequest = async (requestData) => {
@@ -187,13 +200,11 @@ const createServiceRequest = async (requestData) => {
     }
 };
 
-// ** UPDATED: Removed orderBy for immediate fix **
 const getOpenRequests = async () => {
     try {
         const q = query(
             collection(firestoreDB, REQUESTS_COLLECTION),
             where('status', '==', 'open')
-            // orderBy('createdAt', 'desc') <--- Disabled to prevent Index Error
         );
         const snapshot = await getDocs(q);
         const requests = snapshot.docs.map(d => {
@@ -254,7 +265,8 @@ const acceptBid = async (request, bid) => {
             scheduleTime: request.startTime, 
             status: 'confirmed',
             totalPrice: bid.offerAmount,
-            address: request.address
+            address: request.address,
+            providerName: bid.providerName
         };
         
         const { bookingId, error } = await createBooking(bookingData);
@@ -293,5 +305,6 @@ export const bookingService = {
   getClientRequests,
   placeBid,
   acceptBid,
-  sendMessage
+  sendMessage,
+  skipRating // <-- Added here
 };

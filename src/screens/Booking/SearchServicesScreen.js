@@ -8,21 +8,21 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Alert,
+  TextInput,
+  Image,
+  StatusBar
 } from 'react-native';
 import { bookingService } from '../../api/bookingService';
 import ServiceCard from '../../components/booking/ServiceCard';
 import { COLORS } from '../../constants/colors';
+import { useAuth } from '../../hooks/useAuth'; // To get user name
+import { Ionicons } from '@expo/vector-icons';
 
-/**
- * Screen to search and filter services (FR-5)
- * This is the main screen in the "Home" tab.
- *
- * @param {object} props
- * @param {object} props.navigation - React Navigation prop
- */
 const SearchServicesScreen = ({ navigation }) => {
+  const { profile } = useAuth(); // Get profile for greeting
   const [services, setServices] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -38,35 +38,69 @@ const SearchServicesScreen = ({ navigation }) => {
     if (fetchError) {
       setError(fetchError);
       Alert.alert('Error', 'Could not fetch available services.');
-      console.error("Error fetching services: ", fetchError); // Added console log
     } else {
       setServices(fetchedServices);
     }
     setIsLoading(false);
   };
 
-  /**
-   * CORRECTED NAVIGATION with CHECKS:
-   * When a service card is pressed, navigate to the ServiceProvidersScreen,
-   * passing the selected service's ID and Name.
-   */
   const handleServicePress = (service) => {
-    // --- Add Checks ---
-    console.log("Service pressed:", JSON.stringify(service)); // Log the service data
-
     if (!service || !service.id || !service.Name) {
-      console.error("Attempted to navigate without valid service data:", service);
-      Alert.alert("Navigation Error", "Could not load service details. Please try again.");
-      return; // Stop navigation if data is invalid
+      Alert.alert("Navigation Error", "Invalid service data.");
+      return;
     }
-    // --- End Checks ---
-
-    // Navigate to the screen listing providers for this service
     navigation.navigate('ServiceProviders', { 
         serviceId: service.id, 
-        serviceName: service.Name // Use capital 'N' from Firestore data
+        serviceName: service.Name 
     });
   };
+
+  // Filter services based on search query
+  const filteredServices = services.filter(service => 
+    service.Name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // --- NEW: Header Component to fill space and look attractive ---
+  const renderHeader = () => (
+    <View>
+      {/* Top Header Section (Teal Background) */}
+      <View style={styles.headerContainer}>
+        <View style={styles.userInfo}>
+          <View>
+            <Text style={styles.greetingText}>Welcome back,</Text>
+            <Text style={styles.userName}>{profile?.name || 'Guest'}</Text>
+          </View>
+          <Image 
+            source={{ uri: profile?.avatarUrl || 'https://via.placeholder.com/100' }} 
+            style={styles.headerAvatar} 
+          />
+        </View>
+
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color={COLORS.greyDark} style={{cX: 8}} />
+          <TextInput
+            placeholder="Find a service..."
+            placeholderTextColor={COLORS.greyDark}
+            style={styles.searchInput}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+      </View>
+
+      {/* Promotional Banner (Mustard/Secondary) */}
+      <View style={styles.promoContainer}>
+        <View style={styles.promoContent}>
+          <Text style={styles.promoTitle}>Special Offer!</Text>
+          <Text style={styles.promoText}>Get 20% off your first home cleaning.</Text>
+        </View>
+        <Ionicons name="sparkles" size={40} color={COLORS.primary} />
+      </View>
+
+      <Text style={styles.sectionTitle}>Our Services</Text>
+    </View>
+  );
 
   if (isLoading) {
     return (
@@ -76,34 +110,23 @@ const SearchServicesScreen = ({ navigation }) => {
     );
   }
 
-  // Use the error state to show fetch errors
-  if (error && services.length === 0) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>Error loading services: {error.message || error}</Text>
-      </View>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar backgroundColor={COLORS.primary} barStyle="light-content" />
       <FlatList
-        data={services}
+        data={filteredServices}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <ServiceCard service={item} onPress={handleServicePress} />
         )}
+        ListHeaderComponent={renderHeader}
         contentContainerStyle={styles.listContainer}
-        ListHeaderComponent={
-          <Text style={styles.title}>What service do you need?</Text>
-        }
-         ListEmptyComponent={
-            // Show only if not loading and no error fetching
+        ListEmptyComponent={
             !isLoading && !error ? (
                  <View style={styles.centered}>
-                    <Text style={styles.errorText}>No services available at the moment.</Text>
+                    <Text style={styles.emptyText}>No services found matching "{searchQuery}".</Text>
                  </View>
-            ) : null // Don't show "No services" if there was a fetch error
+            ) : null
         }
         onRefresh={fetchServices}
         refreshing={isLoading}
@@ -115,8 +138,99 @@ const SearchServicesScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.background || '#F5F5DC',
+    backgroundColor: COLORS.background, // Beige
   },
+  listContainer: {
+    paddingBottom: 24,
+  },
+  // --- Header Styles ---
+  headerContainer: {
+    backgroundColor: COLORS.primary, // Deep Teal
+    padding: 24,
+    paddingTop: 10,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  userInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  greetingText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+  },
+  userName: {
+    color: '#FFF',
+    fontSize: 22,
+    fontWeight: 'bold',
+  },
+  headerAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 2,
+    borderColor: COLORS.secondary,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 48,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 16,
+    color: COLORS.darkText,
+  },
+  // --- Promo Styles ---
+  promoContainer: {
+    backgroundColor: COLORS.secondary, // Mustard
+    marginHorizontal: 16,
+    borderRadius: 16,
+    padding: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  promoContent: {
+    flex: 1,
+  },
+  promoTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+    marginBottom: 4,
+  },
+  promoText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  // --- Section Styles ---
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.darkText,
+    marginLeft: 16,
+    marginBottom: 12,
+  },
+  // --- Misc ---
   centered: {
     flex: 1,
     justifyContent: 'center',
@@ -124,21 +238,11 @@ const styles = StyleSheet.create({
     padding: 20,
     marginTop: 50,
   },
-  listContainer: {
-    padding: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.darkText || '#333333',
-    marginBottom: 16,
-  },
-  errorText: {
+  emptyText: {
     color: COLORS.greyDark,
     fontSize: 16,
-    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });
 
 export default SearchServicesScreen;
-
